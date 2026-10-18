@@ -1,0 +1,231 @@
+{
+  "version": "1.0",
+  "classes": [
+    "Air",
+    "Belajar",
+    "Cari",
+    "Hari",
+    "Ingat",
+    "Lagi",
+    "Maaf",
+    "Makan",
+    "Motor",
+    "Saya",
+    "Terima kasih",
+    "Tuli",
+    "Apa",
+    "Siapa",
+    "Kapan",
+    "Di mana",
+    "Mengapa",
+    "Bagaimana",
+    "Dengar",
+    "Berangkat",
+    "Datang",
+    "Teman",
+    "Keluarga",
+    "Rumah",
+    "Pagi",
+    "Siang",
+    "Sore",
+    "Malam"
+  ],
+  "bigram_priors": {
+    "Saya": [
+      "Makan",
+      "Belajar",
+      "Dengar",
+      "Datang",
+      "Berangkat",
+      "Ingat",
+      "Rumah",
+      "Tuli"
+    ],
+    "Kapan": [
+      "Datang",
+      "Berangkat",
+      "Makan",
+      "Belajar"
+    ],
+    "Di mana": [
+      "Rumah",
+      "Teman",
+      "Air"
+    ],
+    "Siapa": [
+      "Teman",
+      "Keluarga",
+      "Datang"
+    ],
+    "Apa": [
+      "Kabar",
+      "Lagi",
+      "Cari"
+    ],
+    "Pagi": [
+      "Hari"
+    ],
+    "Siang": [
+      "Hari"
+    ],
+    "Sore": [
+      "Hari"
+    ],
+    "Malam": [
+      "Hari"
+    ],
+    "Terima kasih": [
+      "Teman",
+      "Sama-sama"
+    ],
+    "Maaf": [
+      "Lagi",
+      "Saya"
+    ],
+    "Air": [
+      "Minum",
+      "Makan"
+    ]
+  },
+  "kinematic_thresholds": {
+    "mouth_proximity_dist": 0.28,
+    "ear_proximity_dist": 0.25,
+    "torso_proximity_dist": 0.18,
+    "mouth_boost": 0.25,
+    "ear_boost": 0.3,
+    "torso_boost": 0.2
+  },
+  "smoothing": {
+    "default_window": 4,
+    "confidence_threshold": 0.35
+  },
+  "disambiguation_rules": [
+    {
+      "id": "bimanual_roof_gate",
+      "type": "bimanual_requirement",
+      "target_class": "Rumah",
+      "min_bimanual_ratio": 0.28,
+      "max_roof_contact_dist": 0.38,
+      "action_if_violated": {
+        "prob_scale": 0.05,
+        "reason": "Rumah membutuhkan 2 tangan bertemu membentuk atap segitiga (bimanual)."
+      },
+      "action_if_satisfied": {
+        "prob_scale": 1.35,
+        "reason": "Kontak atap kedua tangan terverifikasi."
+      }
+    },
+    {
+      "id": "ear_vs_temple_gate",
+      "type": "proximity_contrast",
+      "class_a": "Tuli",
+      "target_a": "ear",
+      "class_b": "Ingat",
+      "target_b": "temple",
+      "margin": 0.04,
+      "boost_scale": 1.60,
+      "suppress_scale": 0.30,
+      "reason_a": "Jari menyentuh area daun telinga -> Konfirmasi 'Tuli'.",
+      "reason_b": "Jari menyentuh area dahi/pelipis -> Konfirmasi 'Ingat'."
+    },
+    {
+      "id": "mouth_handshape_gate",
+      "type": "handshape_group",
+      "classes": ["Makan", "Terima kasih", "Kamu", "Air"],
+      "criteria": [
+        {
+          "target_class": "Makan",
+          "conditions": {
+            "max_dist_to_mouth": 0.28,
+            "max_pinch": 0.24
+          },
+          "boost": 1.50,
+          "suppress_others": 0.35,
+          "reason": "Jari menguncup (pinch) di dekat mulut -> Konfirmasi 'Makan'."
+        },
+        {
+          "target_class": "Terima kasih",
+          "conditions": {
+            "min_pinch": 0.26,
+            "min_forward_push": 0.01
+          },
+          "boost": 1.50,
+          "suppress_others": 0.35,
+          "reason": "Telapak tangan terbuka bergerak maju ke depan -> Konfirmasi 'Terima kasih'."
+        },
+        {
+          "target_class": "Kamu",
+          "conditions": {
+            "min_pointing_isolation": 0.10
+          },
+          "boost": 1.60,
+          "suppress_others": 0.40,
+          "reason": "Jari telunjuk menunjuk terisolasi ke depan -> Konfirmasi 'Kamu'."
+        },
+        {
+          "target_class": "Air",
+          "conditions": {
+            "max_dist_to_mouth": 0.32,
+            "min_pinch": 0.24
+          },
+          "boost": 1.45,
+          "suppress_others": 0.40,
+          "reason": "Tangan terbuka mendekati bibir (gestur minum/air) -> Konfirmasi 'Air'."
+        }
+      ]
+    },
+    {
+      "id": "sun_trajectory_pagi_sore",
+      "type": "trajectory_contrast",
+      "class_a": "Pagi",
+      "class_b": "Sore",
+      "metric": "y_travel",
+      "threshold": 0.08,
+      "boost_scale": 1.60,
+      "suppress_scale": 0.30,
+      "reason_a": "Lintasan tangan bergerak naik vertikal (matahari terbit) -> Konfirmasi 'Pagi'.",
+      "reason_b": "Lintasan tangan bergerak turun condong (matahari terbenam) -> Konfirmasi 'Sore'."
+    },
+    {
+      "id": "spatial_trajectory_datang_berangkat",
+      "type": "trajectory_contrast",
+      "class_a": "Datang",
+      "class_b": "Berangkat",
+      "metric": "torso_approach",
+      "threshold": 0.06,
+      "boost_scale": 1.60,
+      "suppress_scale": 0.30,
+      "reason_a": "Tangan ditarik mendekat ke tubuh (inward translation) -> Konfirmasi 'Datang'.",
+      "reason_b": "Tangan didorong menjauh dari tubuh ke depan (outward translation) -> Konfirmasi 'Berangkat'."
+    },
+    {
+      "id": "question_wrist_kapan",
+      "type": "wrist_tap_requirement",
+      "target_class": "Kapan",
+      "max_wrist_tap_dist": 0.28,
+      "boost_scale": 1.60,
+      "suppress_scale": 0.30
+    },
+    {
+      "id": "chest_articulation_saya_maaf",
+      "type": "chest_contrast",
+      "class_a": "Saya",
+      "class_b": "Maaf",
+      "boost_scale": 1.55,
+      "suppress_scale": 0.35
+    },
+    {
+      "id": "dengar_vs_ingat_gate",
+      "type": "proximity_contrast",
+      "class_a": "Dengar",
+      "target_a": "ear",
+      "class_b": "Ingat",
+      "target_b": "temple",
+      "margin": 0.04,
+      "boost_scale": 1.55,
+      "suppress_scale": 0.35,
+      "reason_a": "Tangan aktif di area daun telinga -> Konfirmasi 'Dengar'.",
+      "reason_b": "Jari menyentuh area dahi/pelipis -> Konfirmasi 'Ingat'."
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "model_name": "BISINDO Sign Recognition",
+  "arch": "lstm",
+  "input": {
+    "name": "serving_default_input_landmarks:0",
+    "shape": [
+      1,
+      32,
+      186
+    ],
+    "dtype": "float32",
+    "description": "Sequence of 32 frames, each containing 186 normalized landmarks/kinematic features.",
+    "target_fps": 12.0
+  },
+  "output": {
+    "name": "StatefulPartitionedCall_1:0",
+    "shape": [
+      1,
+      20
+    ],
+    "dtype": "float32",
+    "activation": "softmax (probabilities [0, 1])"
+  },
+  "num_classes": 20,
+  "class_names": [
+    "100 ribu rupiah",
+    "baik",
+    "bantuannya",
+    "bapak",
+    "berapa",
+    "buka",
+    "buku rekening",
+    "disini",
+    "formulir",
+    "isi",
+    "ktp",
+    "mau",
+    "membawa",
+    "minimal",
+    "sama-sama",
+    "selamat siang",
+    "setoran awal",
+    "silakan",
+    "tanda tangan",
+    "terima kasih"
+  ]
+}

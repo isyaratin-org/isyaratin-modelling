@@ -1,0 +1,170 @@
+[
+  {
+    "id": 0,
+    "gloss": "Air",
+    "english": "Water",
+    "folder": "label0"
+  },
+  {
+    "id": 1,
+    "gloss": "Belajar",
+    "english": "Learn",
+    "folder": "label1"
+  },
+  {
+    "id": 2,
+    "gloss": "Cari",
+    "english": "Search",
+    "folder": "label2"
+  },
+  {
+    "id": 3,
+    "gloss": "Hari",
+    "english": "Day",
+    "folder": "label3"
+  },
+  {
+    "id": 4,
+    "gloss": "Ingat",
+    "english": "Remember",
+    "folder": "label4"
+  },
+  {
+    "id": 5,
+    "gloss": "Lagi",
+    "english": "Again",
+    "folder": "label5"
+  },
+  {
+    "id": 6,
+    "gloss": "Maaf",
+    "english": "Sorry",
+    "folder": "label6"
+  },
+  {
+    "id": 7,
+    "gloss": "Makan",
+    "english": "Eat",
+    "folder": "label7"
+  },
+  {
+    "id": 8,
+    "gloss": "Motor",
+    "english": "Motorcycle",
+    "folder": "label8"
+  },
+  {
+    "id": 9,
+    "gloss": "Saya",
+    "english": "I",
+    "folder": "label9"
+  },
+  {
+    "id": 10,
+    "gloss": "Terima kasih",
+    "english": "Thank you",
+    "folder": "label10"
+  },
+  {
+    "id": 11,
+    "gloss": "Tuli",
+    "english": "Deaf",
+    "folder": "label11"
+  },
+  {
+    "id": 12,
+    "gloss": "Apa",
+    "english": "What",
+    "folder": "label12"
+  },
+  {
+    "id": 13,
+    "gloss": "Siapa",
+    "english": "Who",
+    "folder": "label13"
+  },
+  {
+    "id": 14,
+    "gloss": "Kapan",
+    "english": "When",
+    "folder": "label14"
+  },
+  {
+    "id": 15,
+    "gloss": "Di mana",
+    "english": "Where",
+    "folder": "label15"
+  },
+  {
+    "id": 16,
+    "gloss": "Mengapa",
+    "english": "Why",
+    "folder": "label16"
+  },
+  {
+    "id": 17,
+    "gloss": "Bagaimana",
+    "english": "How",
+    "folder": "label17"
+  },
+  {
+    "id": 18,
+    "gloss": "Dengar",
+    "english": "Hear",
+    "folder": "label18"
+  },
+  {
+    "id": 19,
+    "gloss": "Berangkat",
+    "english": "Depart",
+    "folder": "label19"
+  },
+  {
+    "id": 20,
+    "gloss": "Datang",
+    "english": "Come",
+    "folder": "label20"
+  },
+  {
+    "id": 21,
+    "gloss": "Teman",
+    "english": "Friend",
+    "folder": "label21"
+  },
+  {
+    "id": 22,
+    "gloss": "Keluarga",
+    "english": "Family",
+    "folder": "label22"
+  },
+  {
+    "id": 23,
+    "gloss": "Rumah",
+    "english": "House",
+    "folder": "label23"
+  },
+  {
+    "id": 24,
+    "gloss": "Pagi",
+    "english": "Morning",
+    "folder": "label24"
+  },
+  {
+    "id": 25,
+    "gloss": "Siang",
+    "english": "Noon",
+    "folder": "label25"
+  },
+  {
+    "id": 26,
+    "gloss": "Sore",
+    "english": "Afternoon",
+    "folder": "label26"
+  },
+  {
+    "id": 27,
+    "gloss": "Malam",
+    "english": "Night",
+    "folder": "label27"
+  }
+]

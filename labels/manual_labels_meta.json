@@ -1,0 +1,162 @@
+[
+  {
+    "id": 0,
+    "gloss": "100 ribu rupiah",
+    "english": "100 Thousand Rupiah",
+    "folder": "100 ribu rupiah",
+    "path": "datasets/manual/100 ribu rupiah",
+    "total_videos": 15
+  },
+  {
+    "id": 1,
+    "gloss": "baik",
+    "english": "Good / Fine",
+    "folder": "baik",
+    "path": "datasets/manual/baik",
+    "total_videos": 15
+  },
+  {
+    "id": 2,
+    "gloss": "bantuannya",
+    "english": "Help / Assistance",
+    "folder": "bantuannya",
+    "path": "datasets/manual/bantuannya",
+    "total_videos": 15
+  },
+  {
+    "id": 3,
+    "gloss": "bapak",
+    "english": "Father",
+    "folder": "bapak",
+    "path": "datasets/manual/bapak",
+    "total_videos": 15
+  },
+  {
+    "id": 4,
+    "gloss": "berapa",
+    "english": "How Much / How Many",
+    "folder": "berapa",
+    "path": "datasets/manual/berapa",
+    "total_videos": 15
+  },
+  {
+    "id": 5,
+    "gloss": "buka",
+    "english": "Open",
+    "folder": "buka",
+    "path": "datasets/manual/buka",
+    "total_videos": 15
+  },
+  {
+    "id": 6,
+    "gloss": "buku rekening",
+    "english": "Bank Book",
+    "folder": "buku rekening",
+    "path": "datasets/manual/buku rekening",
+    "total_videos": 15
+  },
+  {
+    "id": 7,
+    "gloss": "disini",
+    "english": "Here",
+    "folder": "disini",
+    "path": "datasets/manual/disini",
+    "total_videos": 15
+  },
+  {
+    "id": 8,
+    "gloss": "formulir",
+    "english": "Form",
+    "folder": "formulir",
+    "path": "datasets/manual/formulir",
+    "total_videos": 15
+  },
+  {
+    "id": 9,
+    "gloss": "isi",
+    "english": "Fill",
+    "folder": "isi",
+    "path": "datasets/manual/isi",
+    "total_videos": 15
+  },
+  {
+    "id": 10,
+    "gloss": "ktp",
+    "english": "ID Card",
+    "folder": "ktp",
+    "path": "datasets/manual/ktp",
+    "total_videos": 15
+  },
+  {
+    "id": 11,
+    "gloss": "mau",
+    "english": "Want",
+    "folder": "mau",
+    "path": "datasets/manual/mau",
+    "total_videos": 15
+  },
+  {
+    "id": 12,
+    "gloss": "membawa",
+    "english": "Bring",
+    "folder": "membawa",
+    "path": "datasets/manual/membawa",
+    "total_videos": 15
+  },
+  {
+    "id": 13,
+    "gloss": "minimal",
+    "english": "Minimum",
+    "folder": "minimal",
+    "path": "datasets/manual/minimal",
+    "total_videos": 15
+  },
+  {
+    "id": 14,
+    "gloss": "sama-sama",
+    "english": "You Are Welcome",
+    "folder": "sama-sama",
+    "path": "datasets/manual/sama-sama",
+    "total_videos": 15
+  },
+  {
+    "id": 15,
+    "gloss": "selamat siang",
+    "english": "Good Afternoon",
+    "folder": "selamat siang",
+    "path": "datasets/manual/selamat siang",
+    "total_videos": 15
+  },
+  {
+    "id": 16,
+    "gloss": "setoran awal",
+    "english": "Initial Deposit",
+    "folder": "setoran awal",
+    "path": "datasets/manual/setoran awal",
+    "total_videos": 15
+  },
+  {
+    "id": 17,
+    "gloss": "silakan",
+    "english": "Please",
+    "folder": "silakan",
+    "path": "datasets/manual/silakan",
+    "total_videos": 15
+  },
+  {
+    "id": 18,
+    "gloss": "tanda tangan",
+    "english": "Signature",
+    "folder": "tanda tangan",
+    "path": "datasets/manual/tanda tangan",
+    "total_videos": 15
+  },
+  {
+    "id": 19,
+    "gloss": "terima kasih",
+    "english": "Thank You",
+    "folder": "terima kasih",
+    "path": "datasets/manual/terima kasih",
+    "total_videos": 15
+  }
+]

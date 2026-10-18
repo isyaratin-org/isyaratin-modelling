@@ -1,0 +1,2761 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BISINDO 3D Avatar Pose & Motion Studio</title>
+  <meta name="description" content="Studio Interaktif Pembuat Pose dan Animasi 3D Avatar BISINDO. Sesuaikan posisi sendi tangan, jari jemari, dan susun keyframe gerakan tanpa distorsi video.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Three.js + GLTFLoader + OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+  <!-- Google MediaPipe for Real-Time Webcam Motion Capture -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg-dark: #080c14;
+      --bg-panel: rgba(15, 23, 42, 0.92);
+      --bg-card: rgba(30, 41, 59, 0.6);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Bar */
+    header.top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 20;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      font-size: 22px;
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand-text h1 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-link-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .nav-link-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    /* Workspace Layout */
+    .studio-workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 440px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Left: 3D Viewport */
+    .viewport-area {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 30%, #151d30 0%, #080c14 75%);
+    }
+
+    canvas#studioCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Camera & View Controls Floating Toolbar */
+    .viewport-overlay-tools {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .tool-btn {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .tool-btn:hover, .tool-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Preset Quick Ribbon inside Viewport */
+    .quick-preset-bar {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      right: 14px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      z-index: 10;
+    }
+
+    .quick-preset-bar::-webkit-scrollbar { height: 4px; }
+    .quick-preset-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    .preset-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+    .preset-chip:hover {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: var(--primary-light);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Right: Control Inspector Panel */
+    .inspector-panel {
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      z-index: 15;
+    }
+
+    /* Inspector Tabs */
+    .inspector-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--accent-cyan);
+      border-bottom-color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.08);
+    }
+
+    .tab-btn.tab-left.active {
+      color: var(--accent-emerald);
+      border-bottom-color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .tab-btn.tab-motion.active {
+      color: var(--accent-amber);
+      border-bottom-color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    /* Inspector Content Scrollable */
+    .inspector-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .inspector-body::-webkit-scrollbar { width: 5px; }
+    .inspector-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+    /* Control Groups */
+    .ctrl-group {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .group-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .group-title span.badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+    }
+
+    /* Slider Row */
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .slider-val {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    .slider-input {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .slider-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--accent-cyan);
+      transition: transform 0.1s;
+    }
+
+    .slider-input::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .slider-input.emerald::-webkit-slider-thumb {
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    .slider-input.amber::-webkit-slider-thumb {
+      background: var(--accent-amber);
+      box-shadow: 0 0 8px var(--accent-amber);
+    }
+
+    /* Quick Shape Grid */
+    .shape-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .btn-shape {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 6px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .btn-shape span.icon { font-size: 16px; }
+
+    .btn-shape:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: var(--primary-light);
+      color: #fff;
+    }
+
+    /* Bottom Timeline & Keyframe Sequencer */
+    footer.timeline-bar {
+      height: 100px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 8px 20px;
+      gap: 6px;
+      z-index: 20;
+    }
+
+    .timeline-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .timeline-btns {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+      overflow-x: auto;
+    }
+
+    .timeline-controls > div:last-child { flex-shrink: 0; }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-action { flex-shrink: 0; }
+    .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-action:disabled:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border-color);
+    }
+
+    .btn-action.btn-accent {
+      background: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 14px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-action.btn-amber {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+    }
+
+    .keyframe-track {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      position: relative;
+      overflow-x: auto;
+    }
+
+    .keyframe-node {
+      background: rgba(99, 102, 241, 0.25);
+      border: 1px solid var(--primary-light);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .keyframe-node.selected {
+      background: var(--accent-cyan);
+      border-color: #fff;
+      color: #090d16;
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    .keyframe-node .del-kf {
+      opacity: 0.6;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .keyframe-node .del-kf:hover { opacity: 1; color: var(--accent-rose); }
+
+    /* Modal for Export / Import */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      width: 580px;
+      max-width: 90vw;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 0 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-card h2 {
+      font-size: 17px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-textarea {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-sm);
+      color: #38bdf8;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 12px;
+      height: 220px;
+      resize: vertical;
+      outline: none;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 12, 20, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 50;
+      transition: opacity 0.3s;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Floating Webcam MoCap PiP Box */
+    .webcam-pip-box {
+      position: absolute;
+      top: 62px;
+      right: 18px;
+      width: 280px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: var(--radius-md);
+      box-shadow: 0 0 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(239, 68, 68, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 30;
+      animation: fadeInPip 0.3s ease;
+    }
+
+    @keyframes fadeInPip {
+      from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .pip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.4);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .recording-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      animation: pulseRec 1.2s infinite;
+    }
+
+    @keyframes pulseRec {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .pip-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .pip-close:hover { color: #fff; }
+
+    .pip-video-wrap {
+      position: relative;
+      width: 100%;
+      height: 190px;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .pip-video-wrap video,
+    .pip-video-wrap canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .mocap-countdown-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 52px;
+      font-weight: 900;
+      color: #38bdf8;
+      z-index: 10;
+      text-shadow: 0 0 24px #38bdf8;
+      animation: popCount 0.9s infinite;
+    }
+
+    @keyframes popCount {
+      0% { transform: scale(0.6); opacity: 0; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .pip-controls {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .pip-status-row {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-pip-rec {
+      flex: 1;
+      background: #dc2626;
+      border: 1px solid #ef4444;
+      color: #fff;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-pip-rec:hover { background: #b91c1c; }
+
+    .btn-pip-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-pip-secondary:hover { background: rgba(255, 255, 255, 0.16); }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="brand-title">
+      <div class="brand-icon">🎨</div>
+      <div class="brand-text">
+        <h1>BISINDO 3D Avatar Pose & Motion Studio <span style="font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(6,182,212,0.15); color:var(--accent-cyan); border:1px solid rgba(6,182,212,0.3);">Custom Mode</span></h1>
+        <p>Atur posisi sendi tangan, jemari, dan susun animasi gerakan tanpa noise video.</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a href="avatar_viewer.html" class="nav-link-btn">
+        📹 Buka Video-Player
+      </a>
+      <button class="nav-link-btn" id="btnWebcamMoCap" onclick="toggleWebcamMoCap()" style="background:rgba(239, 68, 68, 0.2); border-color:rgba(239, 68, 68, 0.6); color:#fca5a5; font-weight:700;">
+        🔴 Rekam via Kamera (MoCap)
+      </button>
+      <button class="nav-link-btn" onclick="openExportModal()" style="color:var(--accent-cyan); border-color:rgba(6,182,212,0.4);">
+        💾 Ekspor / Salin JSON
+      </button>
+      <button class="nav-link-btn" onclick="openImportModal()">
+        📂 Impor JSON
+      </button>
+      <button class="nav-link-btn" onclick="resetAllToRestPose()" style="color:var(--accent-rose); border-color:rgba(244,63,94,0.3);">
+        🧍 Reset Netral
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace Grid -->
+  <div class="studio-workspace">
+    
+    <!-- Left: 3D Viewport -->
+    <div class="viewport-area">
+      <!-- Loading Overlay -->
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div style="font-weight:700; font-size:14px;">Memuat Model 3D Avatar (man-rigged.glb)...</div>
+      </div>
+
+      <!-- Floating Webcam MoCap PiP Box -->
+      <div id="webcamPipBox" class="webcam-pip-box" style="display:none;">
+        <div class="pip-header">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div class="recording-dot" id="pipDot"></div>
+            <span style="font-size:11.5px; font-weight:800; color:#fff;">Live Webcam MoCap</span>
+          </div>
+          <button class="pip-close" onclick="stopWebcamMoCap()">&times;</button>
+        </div>
+        <div class="pip-video-wrap">
+          <video id="mocapVideo" playsinline muted autoplay style="transform: scaleX(-1);"></video>
+          <canvas id="mocapCanvas" style="transform: scaleX(-1);"></canvas>
+          <div id="mocapCountdownOverlay" class="mocap-countdown-overlay" style="display:none;">3</div>
+        </div>
+        <div class="pip-controls">
+          <div class="pip-status-row">
+            <span id="mocapStatusText">Menghubungkan kamera...</span>
+            <span id="mocapRecTimer" style="color:#ef4444; font-weight:700; display:none;">REC 0.0s</span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-pip-rec" id="btnRecord5s" onclick="startCountdownAndRecord(5.0)">
+              🔴 Rekam 5s
+            </button>
+            <button class="btn-pip-rec" id="btnRecord3s" onclick="startCountdownAndRecord(3.0)">
+              🔴 Rekam 3s
+            </button>
+            <button class="btn-pip-secondary" id="btnStopRecManual" onclick="stopRecordingNow()" style="display:none; color:#ef4444;">
+              ⏹ Selesai
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Toolbar -->
+      <div class="viewport-overlay-tools">
+        <button class="tool-btn active" onclick="setCameraPreset('upper')">Dada & Tangan</button>
+        <button class="tool-btn" onclick="setCameraPreset('face')">Fokus Wajah</button>
+        <button class="tool-btn" onclick="setCameraPreset('rightHand')">Zoom Tangan Kanan</button>
+        <button class="tool-btn" onclick="setCameraPreset('leftHand')">Zoom Tangan Kiri</button>
+        <button class="tool-btn" onclick="setCameraPreset('torso')">Torso</button>
+        <button class="tool-btn" id="btnToggleClearance" onclick="toggleFaceClearance()" style="color:var(--accent-cyan);">🛡️ Anti-Clipping: ON</button>
+        <button class="tool-btn" id="btnToggleGrid" onclick="toggleGrid()">Grid Lantai: OFF</button>
+      </div>
+
+      <!-- Canvas -->
+      <canvas id="studioCanvas"></canvas>
+
+      <!-- Quick Preset Ribbon -->
+      <div class="quick-preset-bar">
+        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-right:4px;">Preset Cepat:</span>
+        <button class="preset-chip" onclick="applyFullSignPose('rumah')">🏠 Rumah (Atap Segitiga)</button>
+        <button class="preset-chip" onclick="applyFullSignPose('siang')">☀️ Siang (Matahari Atas)</button>
+        <button class="preset-chip" onclick="applyFullSignPose('makan')">🍚 Makan (Depan Mulut)</button>
+        <button class="preset-chip" onclick="applyFullSignPose('lihat')">👀 Lihat / Wajah (Depan Mata)</button>
+        <button class="preset-chip" onclick="applyFullSignPose('saya')">👤 Saya (Tunjuk Dada)</button>
+        <button class="preset-chip" onclick="applyFullSignPose('salam')">🙏 Salam / Terima Kasih</button>
+        <button class="preset-chip" onclick="applyFullSignPose('halo')">👋 Halo / Melambai</button>
+        <button class="preset-chip" onclick="resetAllToRestPose()">🧍 Rest Netral</button>
+      </div>
+    </div>
+
+    <!-- Right: Inspector Controls -->
+    <div class="inspector-panel">
+      <!-- Tabs -->
+      <div class="inspector-tabs">
+        <button class="tab-btn active" id="tabBtnRight" onclick="switchTab('right')">✋ Tangan Kanan</button>
+        <button class="tab-btn tab-left" id="tabBtnLeft" onclick="switchTab('left')">🤚 Tangan Kiri</button>
+        <button class="tab-btn tab-motion" id="tabBtnMotion" onclick="switchTab('motion')">🎬 Tubuh & Motion</button>
+      </div>
+
+      <!-- Inspector Body -->
+      <div class="inspector-body" id="inspectorBody">
+        <!-- Konten tab akan di-generate dinamis / diatur oleh JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Timeline & Keyframe Sequencer -->
+  <footer class="timeline-bar">
+    <div class="timeline-controls">
+      <div class="timeline-btns">
+        <button class="btn-action btn-accent" id="btnPlayMotion" onclick="togglePlayMotion()">
+          ▶ Putar Gerakan
+        </button>
+        <button class="btn-action" onclick="addCurrentAsKeyframe()">
+          ➕ Simpan Pose ke Keyframe
+        </button>
+        <button class="btn-action" id="btnUpdateSelectedKeyframe" onclick="updateSelectedKeyframe()" disabled>
+          💾 Perbarui Terpilih
+        </button>
+        <button class="btn-action" id="btnDeleteSelectedKeyframe" onclick="deleteSelectedKeyframe()" disabled>
+          🗑️ Hapus Terpilih
+        </button>
+        <button class="btn-action" onclick="mirrorRightToLeft()">
+          🪞 Salin Pose Kanan &rarr; Kiri
+        </button>
+        <button class="btn-action" onclick="clearAllKeyframes()">
+          🗑️ Hapus Semua
+        </button>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:11.5px; color:var(--text-muted);">Durasi Gerakan:</span>
+        <select id="motionDurationSelect" onchange="updateMotionDuration(this.value)" style="background:#090d16; color:#fff; border:1px solid var(--border-color); padding:4px 8px; border-radius:6px; font-size:12px;">
+          <option value="1.5">1.5 detik</option>
+          <option value="2.5" selected>2.5 detik</option>
+          <option value="3.5">3.5 detik</option>
+          <option value="5.0">5.0 detik</option>
+        </select>
+        <span id="playheadTime" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-cyan);">0.00s / 2.50s</span>
+      </div>
+    </div>
+
+    <!-- Keyframe Sequence Track -->
+    <div class="keyframe-track" id="keyframeTrack">
+      <!-- Diisi otomatis oleh script -->
+    </div>
+  </footer>
+
+  <!-- Modal Export -->
+  <div class="modal-backdrop" id="exportModal">
+    <div class="modal-card">
+      <h2>
+        <span>💾 Data Animasi JSON (BISINDO Compatible)</span>
+        <span style="cursor:pointer; font-size:18px;" onclick="closeModal('exportModal')">&times;</span>
+      </h2>
+      <p style="font-size:12px; color:var(--text-muted);">Format animasi ini langsung kompatibel dengan Three.js Player, Flutter, dan modul serialisasi mobile.</p>
+      <textarea class="modal-textarea" id="exportTextarea" readonly></textarea>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn-action" onclick="copyExportJson()">📋 Salin ke Clipboard</button>
+        <button class="btn-action btn-accent" onclick="downloadExportJson()">📥 Unduh File .JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Import -->
+  <div class="modal-backdrop" id="importModal">
+    <div class="modal-card">
+      <h2>
+        <span>📂 Impor Data Animasi JSON</span>
+        <span style="cursor:pointer; font-size:18px;" onclick="closeModal('importModal')">&times;</span>
+      </h2>
+      <p style="font-size:12px; color:var(--text-muted);">Pilih file motion manual atau tempel JSON hasil ekspor Pose Studio.</p>
+      <input type="file" accept=".json,application/json" onchange="loadImportFile(this)" style="width:100%; margin-bottom:10px; color:var(--text-muted);">
+      <textarea class="modal-textarea" id="importTextarea" placeholder="Tempel JSON motion di sini..."></textarea>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn-action" onclick="closeModal('importModal')">Batal</button>
+        <button class="btn-action btn-accent" onclick="applyImportedJson()">Terapkan Animasi</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // Global Studio State
+    // -------------------------------------------------------------
+    let scene, camera, renderer, controls, gridHelper;
+    let avatarModel = null;
+    let skeletonBones = {};
+    let restPoseRotations = {};
+
+    let currentTab = 'right'; // 'right' | 'left' | 'motion'
+
+    // Parameter Pose Aktif
+    const currentPose = {
+      // Tangan Kanan
+      RightArm_up: 0,        // Angkat lengan atas (derajat)
+      RightArm_spread: 0,    // Rentangkan ke samping
+      RightArm_roll: 0,      // Putar lengan
+      RightForeArm_bend: 0,  // Tekukan siku (0 s/d 140 deg)
+      RightForeArm_twist: 0, // Putar lengan bawah
+      RightHand_pitch: 0,    // Tekuk pergelangan naik/turun
+      RightHand_yaw: 0,      // Pergelangan kiri/kanan
+      RightHand_roll: 0,     // Pergelangan memutar
+      // Jari Kanan
+      Right_Thumb: 0,
+      Right_Index: 0,
+      Right_Middle: 0,
+      Right_Ring: 0,
+      Right_Pinky: 0,
+      Right_Spread: 0,
+
+      // Tangan Kiri
+      LeftArm_up: 0,
+      LeftArm_spread: 0,
+      LeftArm_roll: 0,
+      LeftForeArm_bend: 0,
+      LeftForeArm_twist: 0,
+      LeftHand_pitch: 0,
+      LeftHand_yaw: 0,
+      LeftHand_roll: 0,
+      // Jari Kiri
+      Left_Thumb: 0,
+      Left_Index: 0,
+      Left_Middle: 0,
+      Left_Ring: 0,
+      Left_Pinky: 0,
+      Left_Spread: 0,
+
+      // Kepala & Tubuh
+      Head_turn: 0,
+      Head_tilt: 0,
+      Spine_bend: 0
+    };
+
+    // Keyframe Animation Sequencer
+    let keyframes = [];
+    let activeKeyframeIdx = -1;
+    let isPlayingMotion = false;
+    let motionPlayStartTime = 0;
+    let totalMotionDuration = 2.5; // detik
+    let activeRawRotations = null;
+    let importedMotionMeta = null;
+    const torsoClipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.64);
+
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // -------------------------------------------------------------
+    // 1. Inisialisasi Three.js WebGL Scene
+    // -------------------------------------------------------------
+    function initThree() {
+      const container = document.querySelector('.viewport-area');
+      const canvas = document.getElementById('studioCanvas');
+
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(36, container.clientWidth / container.clientHeight, 0.1, 20);
+      setCameraPreset('upper');
+
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.shadowMap.enabled = true;
+      renderer.localClippingEnabled = true;
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.enablePan = false;
+      controls.minDistance = 0.55;
+      controls.maxDistance = 2.4;
+      controls.minPolarAngle = Math.PI * 0.28;
+      controls.maxPolarAngle = Math.PI * 0.68;
+      controls.target.set(0, 1.25, 0);
+
+      // Studio Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+      scene.add(ambientLight);
+
+      const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      mainLight.position.set(3, 5, 4);
+      mainLight.castShadow = true;
+      scene.add(mainLight);
+
+      const rimLight = new THREE.DirectionalLight(0x818cf8, 0.8);
+      rimLight.position.set(-3, 3, -3);
+      scene.add(rimLight);
+
+      // Grid Floor
+      gridHelper = new THREE.GridHelper(10, 20, 0x6366f1, 0x1e293b);
+      gridHelper.position.y = 0;
+      gridHelper.visible = false;
+      scene.add(gridHelper);
+
+      window.addEventListener('resize', onWindowResize);
+      animate();
+    }
+
+    function onWindowResize() {
+      const container = document.querySelector('.viewport-area');
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    function setCameraPreset(mode) {
+      document.querySelectorAll('.tool-btn').forEach(b => {
+        if (!b.id.includes('Grid')) b.classList.remove('active');
+      });
+      const btn = Array.from(document.querySelectorAll('.tool-btn')).find(b => b.getAttribute('onclick')?.includes(mode));
+      if (btn) btn.classList.add('active');
+
+      if (!camera) return;
+      if (mode === 'upper') {
+        camera.position.set(0, 1.29, 2.08);
+        if (controls) controls.target.set(0, 1.25, 0);
+      } else if (mode === 'face') {
+        camera.position.set(0, 1.61, 0.82);
+        if (controls) controls.target.set(0, 1.58, 0);
+      } else if (mode === 'rightHand') {
+        camera.position.set(0.42, 1.34, 0.82);
+        if (controls) controls.target.set(0.28, 1.30, 0);
+      } else if (mode === 'leftHand') {
+        camera.position.set(-0.42, 1.34, 0.82);
+        if (controls) controls.target.set(-0.28, 1.30, 0);
+      } else if (mode === 'torso') {
+        camera.position.set(0, 1.20, 2.05);
+        if (controls) controls.target.set(0, 1.17, 0);
+      }
+      if (controls) controls.update();
+    }
+
+    function toggleFaceClearance() {
+      isFaceClearanceActive = !isFaceClearanceActive;
+      const btn = document.getElementById('btnToggleClearance');
+      if (btn) {
+        btn.innerText = `🛡️ Anti-Clipping: ${isFaceClearanceActive ? 'ON' : 'OFF'}`;
+        btn.style.color = isFaceClearanceActive ? 'var(--accent-cyan)' : 'var(--text-dim)';
+      }
+      applyPoseToAvatar();
+    }
+
+    function toggleGrid() {
+      if (!gridHelper) return;
+      gridHelper.visible = !gridHelper.visible;
+      document.getElementById('btnToggleGrid').innerText = `Grid Lantai: ${gridHelper.visible ? 'ON' : 'OFF'}`;
+    }
+
+    // -------------------------------------------------------------
+    // 2. Muat Model 3D Avatar (man-rigged.glb)
+    // -------------------------------------------------------------
+    function loadAvatar() {
+      const loader = new THREE.GLTFLoader();
+      loader.load(
+        'man-rigged.glb',
+        (gltf) => {
+          avatarModel = gltf.scene;
+          avatarModel.position.set(0, 0, 0);
+          scene.add(avatarModel);
+
+          skeletonBones = {};
+          restPoseRotations = {};
+
+          avatarModel.traverse((child) => {
+            if (child.isBone) {
+              skeletonBones[child.name] = child;
+              restPoseRotations[child.name] = child.quaternion.clone();
+            }
+            if (child.isMesh || child.isSkinnedMesh) {
+              child.frustumCulled = false;
+              child.castShadow = true;
+              child.receiveShadow = true;
+              const materials = Array.isArray(child.material) ? child.material : [child.material];
+              materials.filter(Boolean).forEach((material) => {
+                material.clippingPlanes = [torsoClipPlane];
+                material.clipShadows = true;
+                material.needsUpdate = true;
+              });
+            }
+          });
+
+          console.log(`[OK] Avatar dimuat dengan ${Object.keys(skeletonBones).length} tulang.`);
+          loadingOverlay.style.opacity = '0';
+          setTimeout(() => loadingOverlay.style.display = 'none', 300);
+
+          // Mulai dengan kedua tangan turun.
+          resetAllToRestPose();
+          addCurrentAsKeyframe('Netral');
+        },
+        undefined,
+        (err) => {
+          console.error('Error load GLB:', err);
+          loadingOverlay.innerHTML = `<div style="color:#fb7185; font-weight:700;">Gagal memuat man-rigged.glb!</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Pastikan web server lokal aktif (python run_viewer.py)</div>`;
+        }
+      );
+    }
+
+    // -------------------------------------------------------------
+    // 3. Mesin Penerap Rotasi Tulang (Kinematic Solver)
+    // -------------------------------------------------------------
+    function degToRad(deg) { return (deg * Math.PI) / 180.0; }
+
+    // Vektor knuckle hinge & normal telapak tangan (Anatomical Ground-Truth untuk man-rigged.glb)
+    const R_KNUCKLE_HINGE = new THREE.Vector3(0.824, -0.116, 0.555).normalize();
+    const R_PALM_NORMAL   = new THREE.Vector3(0.566, 0.107, -0.818).normalize();
+    const R_THUMB_OPP     = new THREE.Vector3(0.707, 0.15, -0.69).normalize();
+
+    const L_KNUCKLE_HINGE = new THREE.Vector3(-0.824, -0.116, 0.555).normalize();
+    const L_PALM_NORMAL   = new THREE.Vector3(-0.566, 0.107, -0.818).normalize();
+    const L_THUMB_OPP     = new THREE.Vector3(-0.707, 0.15, -0.69).normalize();
+
+    let isFaceClearanceActive = true;
+
+    function applyPoseToAvatar(poseObj) {
+      if (!avatarModel || Object.keys(skeletonBones).length === 0) return;
+
+      const p = poseObj || currentPose;
+
+      // Helper penerapan delta rotasi Euler ke tulang (Local Bone Space)
+      function setBoneRotation(boneName, eulerAngles, order = 'XYZ') {
+        const bone = skeletonBones[boneName];
+        const restQ = restPoseRotations[boneName];
+        if (!bone || !restQ) return;
+
+        const deltaQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+          degToRad(eulerAngles[0]),
+          degToRad(eulerAngles[1]),
+          degToRad(eulerAngles[2]),
+          order
+        ));
+        bone.quaternion.copy(restQ).multiply(deltaQ);
+      }
+
+      // Helper penerapan delta rotasi di Parent Space (menghindari gimbal skew dari local rest pose)
+      function setBoneRotationParent(boneName, deltaQParent) {
+        const bone = skeletonBones[boneName];
+        const restQ = restPoseRotations[boneName];
+        if (!bone || !restQ) return;
+
+        bone.quaternion.copy(deltaQParent).multiply(restQ);
+      }
+
+      // --- Kinematic Arm Solver dengan Dynamic Face Clearance Shield ---
+      function solveArmAndHand(side) {
+        const isR = side === 'Right';
+        const sign = isR ? 1.0 : -1.0;
+
+        let armUp = p[`${side}Arm_up`] || 0;
+        let armSpread = p[`${side}Arm_spread`] || 0;
+        let armRoll = p[`${side}Arm_roll`] || 0;
+        let foreBend = p[`${side}ForeArm_bend`] || 0;
+        let foreTwist = p[`${side}ForeArm_twist`] || 0;
+        let wristPitch = p[`${side}Hand_pitch`] || 0;
+        let wristRoll = p[`${side}Hand_roll`] || 0;
+        let wristYaw = p[`${side}Hand_yaw`] || 0;
+
+        // Face Clearance Buffer: Mencegah tangan & jari menembus kepala/wajah
+        if (isFaceClearanceActive) {
+          // Ketika tangan diangkat mendekati area wajah/leher (armUp tinggi dan siku ditekuk)
+          if (armUp > 25 && foreBend > 70) {
+            // Rasio kedekatan ke wajah
+            const faceProximity = Math.min(1.0, (armUp - 25) / 35.0) * Math.min(1.0, (foreBend - 70) / 35.0);
+            
+            // Batasi tekukan siku berlebih agar tangan tidak tembus masuk ke kepala/tengkorak
+            const maxSafeBend = 100 - faceProximity * 12; // Maksimal ~88°-94° saat dekat mulut/mata
+            if (foreBend > maxSafeBend) {
+              const overflow = foreBend - maxSafeBend;
+              foreBend = maxSafeBend;
+              // Kompensasi: dorong pergelangan tangan sedikit menekuk anggun (pitch) ke arah wajah
+              wristPitch = wristPitch + overflow * 0.22;
+            }
+
+            // Pastikan siku memiliki ruang scapular alami (tidak menjepit ke dalam dada)
+            if (armSpread < 10) {
+              armSpread = armSpread + (10 - armSpread) * faceProximity * 0.8;
+            }
+
+            // Atur roll siku agar lengan bawah melengkung natural di depan wajah
+            armRoll = armRoll + sign * (10 * faceProximity);
+          }
+        }
+
+        // 1. Pundak / Clavicle Dinamis (di Spine Space agar mengangkat pundak natural tanpa melintir)
+        const shoulderElev = Math.max(0, armUp - 20) * 0.14;
+        const shoulderFwd = Math.max(0, armUp - 20) * 0.08;
+        const qClav = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+          degToRad(-shoulderFwd),
+          0,
+          degToRad(sign * shoulderElev),
+          'YXZ'
+        ));
+        setBoneRotationParent(`${side}Shoulder`, qClav);
+
+        // 2. Lengan Atas (Upper Arm)
+        setBoneRotation(`${side}Arm`, [-armUp, sign * armRoll, sign * armSpread], 'XYZ');
+
+        // 3. Lengan Bawah (Forearm)
+        setBoneRotation(`${side}ForeArm`, [-foreBend, sign * foreTwist, 0], 'XYZ');
+
+        // 4. Pergelangan Tangan (Wrist)
+        setBoneRotation(`${side}Hand`, [-wristPitch, sign * wristRoll, sign * wristYaw], 'XYZ');
+
+        // 5. Artikulasi 5 Jari Organik (Tanpa distorsi melintir / patah)
+        const hinge = isR ? R_KNUCKLE_HINGE : L_KNUCKLE_HINGE;
+        const norm = isR ? R_PALM_NORMAL : L_PALM_NORMAL;
+        const oppAxis = isR ? R_THUMB_OPP : L_THUMB_OPP;
+
+        const fingers = [
+          { name: "Index", curl: p[`${side}_Index`] || 0, spreadFactor: sign * -0.4 },
+          { name: "Middle", curl: p[`${side}_Middle`] || 0, spreadFactor: 0.0 },
+          { name: "Ring", curl: p[`${side}_Ring`] || 0, spreadFactor: sign * 0.35 },
+          { name: "Pinky", curl: p[`${side}_Pinky`] || 0, spreadFactor: sign * 0.8 },
+        ];
+
+        const baseSpread = p[`${side}_Spread`] || 0;
+
+        fingers.forEach(f => {
+          const curlRad = degToRad(f.curl);
+          const spreadRad = degToRad(baseSpread * f.spreadFactor);
+
+          // Bone 1: Rotasi di parent (Hand) space pada Knuckle Hinge & Palm Normal
+          const qSpread = new THREE.Quaternion().setFromAxisAngle(norm, spreadRad);
+          const qCurl1 = new THREE.Quaternion().setFromAxisAngle(hinge, -curlRad * 0.45);
+          const deltaParent1 = qSpread.clone().multiply(qCurl1);
+
+          const b1 = skeletonBones[`${side}Hand${f.name}1`];
+          const rest1 = restPoseRotations[`${side}Hand${f.name}1`];
+          if (b1 && rest1) {
+            b1.quaternion.copy(deltaParent1).multiply(rest1);
+          }
+
+          // Bone 2 & 3: Flexion murni mengikuti sumbu engsel ruas (-X)
+          setBoneRotation(`${side}Hand${f.name}2`, [-f.curl * 0.35, 0, 0]);
+          setBoneRotation(`${side}Hand${f.name}3`, [-f.curl * 0.20, 0, 0]);
+        });
+
+        // Jempol (Thumb): Oposisi & tekukan ke telapak
+        const thumbVal = p[`${side}_Thumb`] || 0;
+        const thRad = degToRad(thumbVal);
+
+        const qOpp = new THREE.Quaternion().setFromAxisAngle(oppAxis, thRad * 0.55);
+        const bTh1 = skeletonBones[`${side}HandThumb1`];
+        const restTh1 = restPoseRotations[`${side}HandThumb1`];
+        if (bTh1 && restTh1) {
+          bTh1.quaternion.copy(qOpp).multiply(restTh1);
+        }
+
+        setBoneRotation(`${side}HandThumb2`, [-thumbVal * 0.35, 0, 0]);
+        setBoneRotation(`${side}HandThumb3`, [-thumbVal * 0.20, 0, 0]);
+      }
+
+      // Jalankan Kinematika untuk Kedua Lengan
+      solveArmAndHand('Right');
+      solveArmAndHand('Left');
+
+      // --- C. Kepala & Tubuh ---
+      setBoneRotation("Head", [-p.Head_tilt, p.Head_turn, 0]);
+      setBoneRotation("Spine", [-p.Spine_bend, 0, 0]);
+
+      // Motion manual disimpan sebagai quaternion persis. Slider Studio menjadi
+      // offset lokal di atas pose asli, bukan konversi IK yang menghilangkan detail.
+      if (activeRawRotations && (!poseObj || poseObj === currentPose)) {
+        for (const [boneName, values] of Object.entries(activeRawRotations)) {
+          const bone = skeletonBones[boneName];
+          const restQ = restPoseRotations[boneName];
+          if (!bone || !restQ || !validQuaternion(values)) continue;
+          const offsetQ = restQ.clone().invert().multiply(bone.quaternion);
+          const rawQ = new THREE.Quaternion(...values).normalize();
+          bone.quaternion.copy(restQ).multiply(rawQ).multiply(offsetQ).normalize();
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 4. UI Inspector Renderer & Event Handling
+    // -------------------------------------------------------------
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      if (tab === 'right') document.getElementById('tabBtnRight').classList.add('active');
+      if (tab === 'left') document.getElementById('tabBtnLeft').classList.add('active');
+      if (tab === 'motion') document.getElementById('tabBtnMotion').classList.add('active');
+
+      renderInspector();
+    }
+
+    function createSliderHTML(key, label, min, max, val, unit = "°", colorClass = "") {
+      return `
+        <div class="slider-row">
+          <div class="slider-header">
+            <span>${label}</span>
+            <span class="slider-val" id="val_${key}">${val}${unit}</span>
+          </div>
+          <input type="range" class="slider-input ${colorClass}" min="${min}" max="${max}" value="${val}"
+                 oninput="onSliderChange('${key}', this.value, '${unit}')">
+        </div>
+      `;
+    }
+
+    function onSliderChange(key, val, unit) {
+      currentPose[key] = parseFloat(val);
+      const valEl = document.getElementById(`val_${key}`);
+      if (valEl) valEl.innerText = `${val}${unit}`;
+      applyPoseToAvatar();
+    }
+
+    function onMasterCurlChange(side, val) {
+      const v = parseFloat(val);
+      ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].forEach(f => {
+        const k = `${side}_${f}`;
+        currentPose[k] = v;
+        const slider = document.querySelector(`input[oninput*="'${k}'"]`);
+        if (slider) slider.value = v;
+        const valEl = document.getElementById(`val_${k}`);
+        if (valEl) valEl.innerText = `${v}°`;
+      });
+      applyPoseToAvatar();
+    }
+
+    function renderInspector() {
+      const body = document.getElementById('inspectorBody');
+      if (!body) return;
+
+      if (currentTab === 'right' || currentTab === 'left') {
+        const side = currentTab === 'right' ? 'Right' : 'Left';
+        const sideLabel = currentTab === 'right' ? 'Tangan Kanan' : 'Tangan Kiri';
+        const colorClass = currentTab === 'right' ? '' : 'emerald';
+
+        body.innerHTML = `
+          <!-- Preset Cepat Bentuk Telapak -->
+          <div class="ctrl-group">
+            <div class="group-title">
+              <span>Bentuk Jari Cepat (${sideLabel})</span>
+              <span class="badge">1-Klik</span>
+            </div>
+            <div class="shape-grid">
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'open')"><span class="icon">✋</span>Terbuka</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'relax')"><span class="icon">🍃</span>Rileks / Santai</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'fist')"><span class="icon">✊</span>Genggam</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'point')"><span class="icon">☝️</span>Menunjuk</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'peace')"><span class="icon">✌️</span>Dua Jari (V)</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'pinch')"><span class="icon">👌</span>Kuncup / Makan</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'thumbsUp')"><span class="icon">👍</span>Jempol</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'ily')"><span class="icon">🤟</span>I Love You</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'shaka')"><span class="icon">🤙</span>Telepon</button>
+              <button class="btn-shape" onclick="applyHandShape('${side}', 'flat')"><span class="icon">📐</span>Rapat Rata</button>
+            </div>
+          </div>
+
+          <!-- Lengan & Siku -->
+          <div class="ctrl-group">
+            <div class="group-title">
+              <span>Orientasi Lengan & Siku</span>
+              <span class="badge">Arm Rig</span>
+            </div>
+            ${createSliderHTML(`${side}Arm_up`, 'Angkat Lengan (Naik / Turun)', -30, 140, currentPose[`${side}Arm_up`], '°', colorClass)}
+            ${createSliderHTML(`${side}Arm_spread`, 'Rentang Lengan (Buka / Tutup)', -40, 90, currentPose[`${side}Arm_spread`], '°', colorClass)}
+            ${createSliderHTML(`${side}Arm_roll`, 'Putar Bahu (Roll)', -90, 90, currentPose[`${side}Arm_roll`], '°', colorClass)}
+            ${createSliderHTML(`${side}ForeArm_bend`, 'Tekuk Siku (Flexion)', 0, 145, currentPose[`${side}ForeArm_bend`], '°', colorClass)}
+            ${createSliderHTML(`${side}ForeArm_twist`, 'Putar Lengan Bawah (Twist)', -90, 90, currentPose[`${side}ForeArm_twist`], '°', colorClass)}
+          </div>
+
+          <!-- Pergelangan Tangan -->
+          <div class="ctrl-group">
+            <div class="group-title">
+              <span>Pergelangan Tangan (Wrist)</span>
+              <span class="badge">Hand Joint</span>
+            </div>
+            ${createSliderHTML(`${side}Hand_pitch`, 'Tekuk Telapak (Atas / Bawah)', -60, 60, currentPose[`${side}Hand_pitch`], '°', colorClass)}
+            ${createSliderHTML(`${side}Hand_yaw`, 'Lambaian (Kiri / Kanan)', -45, 45, currentPose[`${side}Hand_yaw`], '°', colorClass)}
+            ${createSliderHTML(`${side}Hand_roll`, 'Putar Telapak (Roll)', -90, 90, currentPose[`${side}Hand_roll`], '°', colorClass)}
+          </div>
+
+          <!-- Artikulasi 5 Jari -->
+          <div class="ctrl-group">
+            <div class="group-title">
+              <span>Artikulasi 5 Jari Jemari</span>
+              <span class="badge">30 Phalanges</span>
+            </div>
+            <div class="slider-row" style="margin-bottom:8px;">
+              <div class="slider-header" style="color:var(--accent-amber);">
+                <span>✊ Genggam Semua Jari (Master)</span>
+                <span class="slider-val" id="val_master_${side}">0%</span>
+              </div>
+              <input type="range" class="slider-input amber" min="0" max="90" value="0"
+                     oninput="onMasterCurlChange('${side}', this.value); document.getElementById('val_master_${side}').innerText = Math.round(this.value/90*100) + '%';">
+            </div>
+            ${createSliderHTML(`${side}_Thumb`, 'Jempol (Thumb)', 0, 90, currentPose[`${side}_Thumb`], '°', colorClass)}
+            ${createSliderHTML(`${side}_Index`, 'Telunjuk (Index)', 0, 90, currentPose[`${side}_Index`], '°', colorClass)}
+            ${createSliderHTML(`${side}_Middle`, 'Jari Tengah (Middle)', 0, 90, currentPose[`${side}_Middle`], '°', colorClass)}
+            ${createSliderHTML(`${side}_Ring`, 'Jari Manis (Ring)', 0, 90, currentPose[`${side}_Ring`], '°', colorClass)}
+            ${createSliderHTML(`${side}_Pinky`, 'Kelingking (Pinky)', 0, 90, currentPose[`${side}_Pinky`], '°', colorClass)}
+            ${createSliderHTML(`${side}_Spread`, 'Renggangkan Jemari (Spread)', -20, 40, currentPose[`${side}_Spread`], '°', colorClass)}
+          </div>
+        `;
+      } else {
+        // Tab Motion & Body
+        body.innerHTML = `
+          <!-- Kepala & Torso -->
+          <div class="ctrl-group">
+            <div class="group-title">
+              <span>Orientasi Kepala & Leher</span>
+              <span class="badge">Head</span>
+            </div>
+            ${createSliderHTML('Head_turn', 'Toleh Kepala (Kiri / Kanan)', -45, 45, currentPose.Head_turn, '°', 'amber')}
+            ${createSliderHTML('Head_tilt', 'Angguk Kepala (Atas / Bawah)', -30, 30, currentPose.Head_tilt, '°', 'amber')}
+            ${createSliderHTML('Spine_bend', 'Membungkuk / Tegak (Torso)', -20, 30, currentPose.Spine_bend, '°', 'amber')}
+          </div>
+
+          <!-- Katalog Gerakan BISINDO -->
+          <div class="ctrl-group">
+            <div class="group-title">
+              <span>Katalog Preset Penuh Isyarat</span>
+              <span class="badge">BISINDO Vocab</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn-action" onclick="applyFullSignPose('rumah')">🏠 Pose Rumah (Atap Segitiga Simetris)</button>
+              <button class="btn-action" onclick="applyFullSignPose('siang')">☀️ Pose Siang (Matahari Terik)</button>
+              <button class="btn-action" onclick="applyFullSignPose('makan')">🍚 Pose Makan (Depan Mulut - Anti-Clipping)</button>
+              <button class="btn-action" onclick="applyFullSignPose('lihat')">👀 Pose Lihat / Mata (Di Depan Wajah)</button>
+              <button class="btn-action" onclick="applyFullSignPose('saya')">👤 Pose Saya (Telunjuk ke Dada)</button>
+              <button class="btn-action" onclick="applyFullSignPose('salam')">🙏 Pose Salam / Terima Kasih</button>
+              <button class="btn-action" onclick="applyFullSignPose('halo')">👋 Pose Halo / Lambaian</button>
+            </div>
+          </div>
+
+          <!-- Operasi Pose -->
+          <div class="ctrl-group">
+            <div class="group-title">
+              <span>Utilitas & Manipulasi</span>
+              <span class="badge">Tools</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn-action" onclick="mirrorRightToLeft()">🪞 Salin Pose Kanan &rarr; Tangan Kiri</button>
+              <button class="btn-action" onclick="mirrorLeftToRight()">🪞 Salin Pose Kiri &rarr; Tangan Kanan</button>
+              <button class="btn-action" onclick="resetAllToRestPose()" style="color:var(--accent-rose);">🧍 Kembalikan ke Rest Pose Netral</button>
+            </div>
+          </div>
+        `;
+      }
+      if (activeRawRotations) {
+        body.insertAdjacentHTML('afterbegin', `<div style="padding:10px 12px; margin-bottom:10px; border:1px solid rgba(34,211,238,.3); border-radius:8px; color:var(--accent-cyan); font-size:11px; line-height:1.5;">Motion manual aktif. Slider memberi offset pada pose asli; klik “Perbarui Terpilih” untuk menyimpan perubahan.</div>`);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 5. Preset Handshapes & Full Sign Poses
+    // -------------------------------------------------------------
+    function applyHandShape(side, shape) {
+      if (shape === 'open') {
+        currentPose[`${side}_Thumb`] = 0;
+        currentPose[`${side}_Index`] = 0;
+        currentPose[`${side}_Middle`] = 0;
+        currentPose[`${side}_Ring`] = 0;
+        currentPose[`${side}_Pinky`] = 0;
+        currentPose[`${side}_Spread`] = 12;
+      } else if (shape === 'relax') {
+        // Postur rileks alami tangan manusia saat istirahat
+        currentPose[`${side}_Thumb`] = 15;
+        currentPose[`${side}_Index`] = 20;
+        currentPose[`${side}_Middle`] = 24;
+        currentPose[`${side}_Ring`] = 26;
+        currentPose[`${side}_Pinky`] = 28;
+        currentPose[`${side}_Spread`] = 6;
+      } else if (shape === 'fist') {
+        currentPose[`${side}_Thumb`] = 70;
+        currentPose[`${side}_Index`] = 85;
+        currentPose[`${side}_Middle`] = 85;
+        currentPose[`${side}_Ring`] = 85;
+        currentPose[`${side}_Pinky`] = 85;
+        currentPose[`${side}_Spread`] = -6;
+      } else if (shape === 'point') {
+        currentPose[`${side}_Thumb`] = 60;
+        currentPose[`${side}_Index`] = 0;
+        currentPose[`${side}_Middle`] = 85;
+        currentPose[`${side}_Ring`] = 85;
+        currentPose[`${side}_Pinky`] = 85;
+        currentPose[`${side}_Spread`] = 0;
+      } else if (shape === 'peace') {
+        currentPose[`${side}_Thumb`] = 65;
+        currentPose[`${side}_Index`] = 0;
+        currentPose[`${side}_Middle`] = 0;
+        currentPose[`${side}_Ring`] = 85;
+        currentPose[`${side}_Pinky`] = 85;
+        currentPose[`${side}_Spread`] = 20;
+      } else if (shape === 'pinch') {
+        // Kuncup Makanan (Ujung jari jempol, telunjuk & tengah bertemu membentuk kerucut rapi)
+        currentPose[`${side}_Thumb`] = 55;
+        currentPose[`${side}_Index`] = 50;
+        currentPose[`${side}_Middle`] = 55;
+        currentPose[`${side}_Ring`] = 65;
+        currentPose[`${side}_Pinky`] = 70;
+        currentPose[`${side}_Spread`] = -6;
+      } else if (shape === 'thumbsUp') {
+        currentPose[`${side}_Thumb`] = 0;
+        currentPose[`${side}_Index`] = 85;
+        currentPose[`${side}_Middle`] = 85;
+        currentPose[`${side}_Ring`] = 85;
+        currentPose[`${side}_Pinky`] = 85;
+        currentPose[`${side}_Spread`] = 0;
+      } else if (shape === 'ily') {
+        currentPose[`${side}_Thumb`] = 0;
+        currentPose[`${side}_Index`] = 0;
+        currentPose[`${side}_Middle`] = 85;
+        currentPose[`${side}_Ring`] = 85;
+        currentPose[`${side}_Pinky`] = 0;
+        currentPose[`${side}_Spread`] = 25;
+      } else if (shape === 'shaka') {
+        currentPose[`${side}_Thumb`] = 0;
+        currentPose[`${side}_Index`] = 85;
+        currentPose[`${side}_Middle`] = 85;
+        currentPose[`${side}_Ring`] = 85;
+        currentPose[`${side}_Pinky`] = 0;
+        currentPose[`${side}_Spread`] = 30;
+      } else if (shape === 'flat') {
+        currentPose[`${side}_Thumb`] = 25;
+        currentPose[`${side}_Index`] = 0;
+        currentPose[`${side}_Middle`] = 0;
+        currentPose[`${side}_Ring`] = 0;
+        currentPose[`${side}_Pinky`] = 0;
+        currentPose[`${side}_Spread`] = -8;
+      }
+
+      applyPoseToAvatar();
+      renderInspector();
+    }
+
+    function applyFullSignPose(signName) {
+      if (signName === 'rumah') {
+        // Kedua tangan naik simetris ke depan dada membentuk atap segitiga
+        currentPose.RightArm_up = 32;
+        currentPose.RightArm_spread = 20;
+        currentPose.RightArm_roll = 8;
+        currentPose.RightForeArm_bend = 88;
+        currentPose.RightForeArm_twist = -30;
+        currentPose.RightHand_pitch = 12;
+        currentPose.RightHand_yaw = -20;
+        currentPose.RightHand_roll = 0;
+        applyHandShape('Right', 'flat');
+
+        currentPose.LeftArm_up = 32;
+        currentPose.LeftArm_spread = 20;
+        currentPose.LeftArm_roll = 8;
+        currentPose.LeftForeArm_bend = 88;
+        currentPose.LeftForeArm_twist = -30;
+        currentPose.LeftHand_pitch = 12;
+        currentPose.LeftHand_yaw = -20;
+        currentPose.LeftHand_roll = 0;
+        applyHandShape('Left', 'flat');
+
+        currentPose.Head_turn = 0;
+        currentPose.Head_tilt = 0;
+      } else if (signName === 'siang') {
+        // Tangan Kanan diangkat tinggi ke atas kepala (Matahari Terik)
+        currentPose.RightArm_up = 95;
+        currentPose.RightArm_spread = 18;
+        currentPose.RightArm_roll = 12;
+        currentPose.RightForeArm_bend = 30;
+        currentPose.RightForeArm_twist = 0;
+        currentPose.RightHand_pitch = 0;
+        currentPose.RightHand_yaw = 0;
+        currentPose.RightHand_roll = 0;
+        applyHandShape('Right', 'open');
+
+        // Tangan Kiri netral santai di samping
+        currentPose.LeftArm_up = 0;
+        currentPose.LeftArm_spread = 0;
+        currentPose.LeftArm_roll = 0;
+        currentPose.LeftForeArm_bend = 5;
+        currentPose.LeftForeArm_twist = 0;
+        applyHandShape('Left', 'relax');
+
+        currentPose.Head_tilt = -8; // Sedikit mendongak
+      } else if (signName === 'makan') {
+        // Tangan Kanan terangkat ke depan mulut dengan jarak aman ~12cm (anti-clipping wajah)
+        currentPose.RightArm_up = 38;
+        currentPose.RightArm_spread = 14;
+        currentPose.RightArm_roll = 8;
+        currentPose.RightForeArm_bend = 84;
+        currentPose.RightForeArm_twist = 18;
+        currentPose.RightHand_pitch = 10;
+        currentPose.RightHand_yaw = -8;
+        currentPose.RightHand_roll = 4;
+        applyHandShape('Right', 'pinch');
+
+        // Tangan Kiri netral santai
+        currentPose.LeftArm_up = 0;
+        currentPose.LeftArm_spread = 0;
+        currentPose.LeftForeArm_bend = 5;
+        applyHandShape('Left', 'relax');
+
+        currentPose.Head_tilt = 4; // Menatap sedikit ke arah tangan
+        currentPose.Head_turn = 0;
+      } else if (signName === 'lihat') {
+        // Tangan Kanan di dekat mata / pelipis (Isyarat 'Melihat' / 'Wajah')
+        currentPose.RightArm_up = 46;
+        currentPose.RightArm_spread = 18;
+        currentPose.RightArm_roll = 10;
+        currentPose.RightForeArm_bend = 82;
+        currentPose.RightForeArm_twist = 12;
+        currentPose.RightHand_pitch = 8;
+        currentPose.RightHand_yaw = 0;
+        currentPose.RightHand_roll = 0;
+        applyHandShape('Right', 'peace');
+
+        currentPose.LeftArm_up = 0;
+        currentPose.LeftArm_spread = 0;
+        currentPose.LeftForeArm_bend = 5;
+        applyHandShape('Left', 'relax');
+
+        currentPose.Head_tilt = 2;
+        currentPose.Head_turn = 2;
+      } else if (signName === 'saya') {
+        // Tangan Kanan menunjuk dada tengah dengan jarak aman 8cm
+        currentPose.RightArm_up = 22;
+        currentPose.RightArm_spread = 2;
+        currentPose.RightArm_roll = 0;
+        currentPose.RightForeArm_bend = 86;
+        currentPose.RightForeArm_twist = 35;
+        currentPose.RightHand_pitch = 15;
+        currentPose.RightHand_yaw = 10;
+        currentPose.RightHand_roll = 0;
+        applyHandShape('Right', 'point');
+
+        // Tangan Kiri netral
+        currentPose.LeftArm_up = 0;
+        currentPose.LeftArm_spread = 0;
+        currentPose.LeftForeArm_bend = 5;
+        applyHandShape('Left', 'relax');
+      } else if (signName === 'salam') {
+        // Dua telapak menyatu di depan dada
+        currentPose.RightArm_up = 30;
+        currentPose.RightArm_spread = -2;
+        currentPose.RightForeArm_bend = 88;
+        currentPose.RightForeArm_twist = 65;
+        currentPose.RightHand_pitch = 8;
+        applyHandShape('Right', 'flat');
+
+        currentPose.LeftArm_up = 30;
+        currentPose.LeftArm_spread = -2;
+        currentPose.LeftForeArm_bend = 88;
+        currentPose.LeftForeArm_twist = 65;
+        currentPose.LeftHand_pitch = 8;
+        applyHandShape('Left', 'flat');
+
+        currentPose.Head_tilt = 8; // Menunduk hormat
+      } else if (signName === 'halo') {
+        currentPose.RightArm_up = 68;
+        currentPose.RightArm_spread = 28;
+        currentPose.RightForeArm_bend = 75;
+        currentPose.RightForeArm_twist = 15;
+        currentPose.RightHand_pitch = 0;
+        currentPose.RightHand_yaw = 18;
+        applyHandShape('Right', 'open');
+
+        currentPose.LeftArm_up = 0;
+        currentPose.LeftForeArm_bend = 5;
+        applyHandShape('Left', 'relax');
+      }
+
+      applyPoseToAvatar();
+      renderInspector();
+    }
+
+    function mirrorRightToLeft() {
+      currentPose.LeftArm_up = currentPose.RightArm_up;
+      currentPose.LeftArm_spread = currentPose.RightArm_spread;
+      currentPose.LeftArm_roll = currentPose.RightArm_roll;
+      currentPose.LeftForeArm_bend = currentPose.RightForeArm_bend;
+      currentPose.LeftForeArm_twist = currentPose.RightForeArm_twist;
+      currentPose.LeftHand_pitch = currentPose.RightHand_pitch;
+      currentPose.LeftHand_yaw = currentPose.RightHand_yaw;
+      currentPose.LeftHand_roll = currentPose.RightHand_roll;
+
+      currentPose.Left_Thumb = currentPose.Right_Thumb;
+      currentPose.Left_Index = currentPose.Right_Index;
+      currentPose.Left_Middle = currentPose.Right_Middle;
+      currentPose.Left_Ring = currentPose.Right_Ring;
+      currentPose.Left_Pinky = currentPose.Right_Pinky;
+      currentPose.Left_Spread = currentPose.Right_Spread;
+
+      applyPoseToAvatar();
+      renderInspector();
+    }
+
+    function mirrorLeftToRight() {
+      currentPose.RightArm_up = currentPose.LeftArm_up;
+      currentPose.RightArm_spread = currentPose.LeftArm_spread;
+      currentPose.RightArm_roll = currentPose.LeftArm_roll;
+      currentPose.RightForeArm_bend = currentPose.LeftForeArm_bend;
+      currentPose.RightForeArm_twist = currentPose.LeftForeArm_twist;
+      currentPose.RightHand_pitch = currentPose.LeftHand_pitch;
+      currentPose.RightHand_yaw = currentPose.LeftHand_yaw;
+      currentPose.RightHand_roll = currentPose.LeftHand_roll;
+
+      currentPose.Right_Thumb = currentPose.Left_Thumb;
+      currentPose.Right_Index = currentPose.Left_Index;
+      currentPose.Right_Middle = currentPose.Left_Middle;
+      currentPose.Right_Ring = currentPose.Left_Ring;
+      currentPose.Right_Pinky = currentPose.Left_Pinky;
+      currentPose.Right_Spread = currentPose.Left_Spread;
+
+      applyPoseToAvatar();
+      renderInspector();
+    }
+
+    function resetAllToRestPose() {
+      activeRawRotations = null;
+      for (const k of Object.keys(currentPose)) {
+        currentPose[k] = 0;
+      }
+      // Rest rig agak menyamping; -28° membuat lengan hampir vertikal.
+      currentPose.RightArm_spread = -28;
+      currentPose.LeftArm_spread = -28;
+      for (const side of ['Right', 'Left']) {
+        currentPose[`${side}_Thumb`] = 15;
+        currentPose[`${side}_Index`] = 20;
+        currentPose[`${side}_Middle`] = 24;
+        currentPose[`${side}_Ring`] = 26;
+        currentPose[`${side}_Pinky`] = 28;
+        currentPose[`${side}_Spread`] = 6;
+      }
+      applyPoseToAvatar();
+      renderInspector();
+    }
+
+    // -------------------------------------------------------------
+    // 6. Keyframe Sequencer & Motion Interpolation
+    // -------------------------------------------------------------
+    function validQuaternion(values) {
+      return Array.isArray(values) && values.length === 4 && values.every(Number.isFinite)
+        && values.some((value) => Math.abs(value) > 1e-8);
+    }
+
+    function cloneRotationMap(rotations) {
+      if (!rotations || typeof rotations !== 'object' || Array.isArray(rotations)) {
+        throw new Error('Frame motion tidak memiliki rotations yang valid.');
+      }
+      const result = {};
+      for (const [boneName, values] of Object.entries(rotations)) {
+        if (!validQuaternion(values)) throw new Error(`Quaternion ${boneName} tidak valid.`);
+        result[boneName] = values.slice();
+      }
+      if (Object.keys(result).length === 0) throw new Error('Frame motion tidak memiliki rotasi tulang.');
+      return result;
+    }
+
+    function captureBoneRotations(boneNames) {
+      const rotations = {};
+      for (const boneName of boneNames) {
+        const bone = skeletonBones[boneName];
+        const restQ = restPoseRotations[boneName];
+        if (!bone || !restQ) continue;
+        const deltaQ = restQ.clone().invert().multiply(bone.quaternion).normalize();
+        rotations[boneName] = [deltaQ.x, deltaQ.y, deltaQ.z, deltaQ.w].map(v => +v.toFixed(5));
+      }
+      return rotations;
+    }
+
+    function applyRawRotations(rotations) {
+      if (!avatarModel) return;
+      for (const [name, restQ] of Object.entries(restPoseRotations)) {
+        skeletonBones[name].quaternion.copy(restQ);
+      }
+      for (const [name, values] of Object.entries(rotations)) {
+        const bone = skeletonBones[name];
+        const restQ = restPoseRotations[name];
+        if (bone && restQ && validQuaternion(values)) {
+          bone.quaternion.copy(restQ).multiply(new THREE.Quaternion(...values).normalize());
+        }
+      }
+    }
+
+    function interpolateRawRotations(a, b, alpha) {
+      const rotations = {};
+      const identity = [0, 0, 0, 1];
+      for (const name of new Set([...Object.keys(a), ...Object.keys(b)])) {
+        const qa = new THREE.Quaternion(...(a[name] || identity)).normalize();
+        const qb = new THREE.Quaternion(...(b[name] || identity)).normalize();
+        const q = qa.slerp(qb, alpha).normalize();
+        rotations[name] = [q.x, q.y, q.z, q.w];
+      }
+      return rotations;
+    }
+
+    function hasRawTimeline() {
+      return keyframes.length > 0 && !!keyframes[0].rotations;
+    }
+
+    function syncDurationSelect() {
+      const select = document.getElementById('motionDurationSelect');
+      select.querySelector('option[data-imported-duration]')?.remove();
+      const matching = [...select.options].find(option => Math.abs(+option.value - totalMotionDuration) < 0.001);
+      if (matching) select.value = matching.value;
+      else {
+        const option = new Option(`${totalMotionDuration.toFixed(2)} detik (impor)`, String(totalMotionDuration));
+        option.dataset.importedDuration = 'true';
+        select.add(option);
+        select.value = option.value;
+      }
+    }
+
+    function addCurrentAsKeyframe(label) {
+      if (hasRawTimeline()) {
+        const insertAt = Math.max(0, activeKeyframeIdx + 1);
+        const before = keyframes[Math.max(0, insertAt - 1)];
+        const after = keyframes[insertAt];
+        const time = after ? (before.time + after.time) / 2
+          : Math.min(totalMotionDuration, before.time + 1 / 30);
+        const rotations = captureBoneRotations(Object.keys(before.rotations));
+        keyframes.splice(insertAt, 0, {
+          id: Date.now() + Math.random(), label: label || 'Pose Baru', time, rotations
+        });
+        activeKeyframeIdx = insertAt;
+        activeRawRotations = cloneRotationMap(rotations);
+        for (const key of Object.keys(currentPose)) currentPose[key] = 0;
+        renderInspector();
+        renderKeyframeTrack();
+        return;
+      }
+      const snap = JSON.parse(JSON.stringify(currentPose));
+      const kfIndex = keyframes.length;
+
+      keyframes.push({
+        id: Date.now() + Math.random(),
+        label: label || `Pose #${kfIndex + 1}`,
+        time: (kfIndex / Math.max(1, keyframes.length + 1)) * totalMotionDuration,
+        pose: snap
+      });
+
+      // Sort by time
+      recalculateKeyframeTimes();
+      activeKeyframeIdx = keyframes.length - 1;
+      renderKeyframeTrack();
+    }
+
+    function recalculateKeyframeTimes() {
+      if (hasRawTimeline()) return; // timestamp sumber tetap utuh saat hapus/tambah frame
+      if (keyframes.length <= 1) {
+        if (keyframes.length === 1) keyframes[0].time = 0;
+        return;
+      }
+      const step = totalMotionDuration / (keyframes.length - 1);
+      keyframes.forEach((kf, i) => {
+        kf.time = i * step;
+      });
+    }
+
+    function renderKeyframeTrack() {
+      const track = document.getElementById('keyframeTrack');
+      if (!track) return;
+
+      const hasSelection = activeKeyframeIdx >= 0 && activeKeyframeIdx < keyframes.length;
+      document.getElementById('btnUpdateSelectedKeyframe').disabled = !hasSelection;
+      document.getElementById('btnDeleteSelectedKeyframe').disabled = !hasSelection;
+
+      if (keyframes.length === 0) {
+        track.innerHTML = `<span style="font-size:11.5px; color:var(--text-dim);">Belum ada keyframe tersimpan. Atur pose lalu klik "➕ Simpan Pose ke Keyframe" untuk merekam urutan gerakan!</span>`;
+        document.getElementById('playheadTime').innerText = `0.00s / ${totalMotionDuration.toFixed(2)}s`;
+        return;
+      }
+
+      let html = '';
+      keyframes.forEach((kf, idx) => {
+        const isSel = idx === activeKeyframeIdx;
+        const safeLabel = String(kf.label || `Frame ${idx + 1}`).replace(/[&<>"']/g, char => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[char]);
+        html += `
+          <div class="keyframe-node ${isSel ? 'selected' : ''}" onclick="selectKeyframe(${idx})">
+            <span>⏱️ ${kf.time.toFixed(2)}s: <strong>${safeLabel}</strong></span>
+            <span class="del-kf" onclick="event.stopPropagation(); deleteKeyframe(${idx})">&times;</span>
+          </div>
+        `;
+      });
+      track.innerHTML = html;
+      if (!isPlayingMotion && hasSelection) {
+        document.getElementById('playheadTime').innerText = `${keyframes[activeKeyframeIdx].time.toFixed(2)}s / ${totalMotionDuration.toFixed(2)}s`;
+      }
+    }
+
+    function selectKeyframe(idx) {
+      if (idx < 0 || idx >= keyframes.length) return;
+      stopMotionPlayback();
+      activeKeyframeIdx = idx;
+      if (keyframes[idx].rotations) {
+        for (const key of Object.keys(currentPose)) currentPose[key] = 0;
+        activeRawRotations = cloneRotationMap(keyframes[idx].rotations);
+      } else {
+        activeRawRotations = null;
+        Object.assign(currentPose, JSON.parse(JSON.stringify(keyframes[idx].pose)));
+      }
+      applyPoseToAvatar();
+      renderInspector();
+      renderKeyframeTrack();
+    }
+
+    function deleteKeyframe(idx) {
+      if (idx < 0 || idx >= keyframes.length) return;
+      stopMotionPlayback();
+      keyframes.splice(idx, 1);
+      recalculateKeyframeTimes();
+      activeKeyframeIdx = Math.min(idx, keyframes.length - 1);
+      if (keyframes.length > 0) {
+        selectKeyframe(activeKeyframeIdx);
+      } else {
+        activeRawRotations = null;
+        importedMotionMeta = null;
+        renderKeyframeTrack();
+      }
+    }
+
+    function deleteSelectedKeyframe() {
+      deleteKeyframe(activeKeyframeIdx);
+    }
+
+    function updateSelectedKeyframe() {
+      if (activeKeyframeIdx < 0 || activeKeyframeIdx >= keyframes.length) return;
+      stopMotionPlayback();
+      if (hasRawTimeline()) {
+        const names = Object.keys(keyframes[activeKeyframeIdx].rotations);
+        keyframes[activeKeyframeIdx].rotations = captureBoneRotations(names);
+        selectKeyframe(activeKeyframeIdx);
+      } else {
+        keyframes[activeKeyframeIdx].pose = JSON.parse(JSON.stringify(currentPose));
+        renderKeyframeTrack();
+      }
+    }
+
+    function clearAllKeyframes() {
+      if (keyframes.length === 0) return;
+      stopMotionPlayback();
+      keyframes = [];
+      activeKeyframeIdx = -1;
+      activeRawRotations = null;
+      importedMotionMeta = null;
+      renderKeyframeTrack();
+    }
+
+    function updateMotionDuration(val) {
+      const newDuration = parseFloat(val);
+      if (!Number.isFinite(newDuration) || newDuration <= 0) return;
+      if (hasRawTimeline()) {
+        const scale = newDuration / totalMotionDuration;
+        keyframes.forEach(kf => { kf.time *= scale; });
+      }
+      totalMotionDuration = newDuration;
+      recalculateKeyframeTimes();
+      syncDurationSelect();
+      renderKeyframeTrack();
+    }
+
+    function togglePlayMotion() {
+      if (isPlayingMotion) {
+        stopMotionPlayback();
+        return;
+      }
+      if (keyframes.length < 2) {
+        alert("Tambahkan minimal 2 keyframe pose untuk dapat memutar animasi!");
+        return;
+      }
+
+      isPlayingMotion = true;
+      document.getElementById('btnPlayMotion').innerText = '⏸ Jeda Gerakan';
+      motionPlayStartTime = performance.now();
+    }
+
+    function stopMotionPlayback() {
+      if (!isPlayingMotion) return;
+      isPlayingMotion = false;
+      document.getElementById('btnPlayMotion').innerText = '▶ Putar Gerakan';
+    }
+
+    function interpolatePoses(pA, pB, alpha) {
+      const result = {};
+      for (const k of Object.keys(pA)) {
+        const vA = pA[k] || 0;
+        const vB = pB[k] || 0;
+        result[k] = vA + (vB - vA) * alpha;
+      }
+      return result;
+    }
+
+    function keyframePairAtTime(timeSec) {
+      if (timeSec <= keyframes[0].time) return [keyframes[0], keyframes[0], 0];
+      const last = keyframes[keyframes.length - 1];
+      if (timeSec >= last.time) return [last, last, 0];
+      for (let i = 0; i < keyframes.length - 1; i++) {
+        const a = keyframes[i];
+        const b = keyframes[i + 1];
+        if (timeSec >= a.time && timeSec <= b.time) {
+          return [a, b, (timeSec - a.time) / Math.max(1e-6, b.time - a.time)];
+        }
+      }
+      return [last, last, 0];
+    }
+
+    // -------------------------------------------------------------
+    // 7. Animation Loop
+    // -------------------------------------------------------------
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (isPlayingMotion && keyframes.length >= 2) {
+        const elapsed = (performance.now() - motionPlayStartTime) / 1000.0;
+        const loopTime = elapsed % totalMotionDuration;
+
+        document.getElementById('playheadTime').innerText = `${loopTime.toFixed(2)}s / ${totalMotionDuration.toFixed(2)}s`;
+
+        const [prevKf, nextKf, alpha] = keyframePairAtTime(loopTime);
+        if (hasRawTimeline()) {
+          applyRawRotations(interpolateRawRotations(prevKf.rotations, nextKf.rotations, alpha));
+        } else {
+          const smoothAlpha = alpha * alpha * (3 - 2 * alpha);
+          applyPoseToAvatar(interpolatePoses(prevKf.pose, nextKf.pose, smoothAlpha));
+        }
+      }
+
+      if (controls) controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // -------------------------------------------------------------
+    // 8. Ekspor & Impor Motion JSON
+    // -------------------------------------------------------------
+    function generateMotionJsonData() {
+      if (hasRawTimeline()) {
+        const frames = keyframes.map((kf, index) => ({
+          frame: Number.isInteger(kf.frameIndex) ? kf.frameIndex : index,
+          timestampMs: +(kf.time * 1000).toFixed(2),
+          rotations: cloneRotationMap(kf.rotations)
+        }));
+        return {
+          ...(importedMotionMeta || {}),
+          signId: importedMotionMeta?.signId || 'custom_studio_motion',
+          gloss: importedMotionMeta?.gloss || 'CustomSign',
+          sourceFps: importedMotionMeta?.sourceFps || 30,
+          durationMs: +(totalMotionDuration * 1000).toFixed(2),
+          coordinateSpace: 'avatar_local_quaternion',
+          skeleton: 'Armature',
+          totalFrames: frames.length,
+          keyframesCount: keyframes.length,
+          studioKeyframes: keyframes,
+          frames
+        };
+      }
+      // Sampel 30 FPS dari keyframe interpolation
+      const fps = 30.0;
+      // Sertakan pose tepat di timestamp akhir.
+      const totalFrames = Math.round(totalMotionDuration * fps) + 1;
+      const frames = [];
+
+      // Dapatkan daftar tulang yang kita manipulasi
+      const targetBoneNames = [
+        "RightShoulder", "RightArm", "RightForeArm", "RightHand",
+        "RightHandThumb1", "RightHandThumb2", "RightHandThumb3",
+        "RightHandIndex1", "RightHandIndex2", "RightHandIndex3",
+        "RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3",
+        "RightHandRing1", "RightHandRing2", "RightHandRing3",
+        "RightHandPinky1", "RightHandPinky2", "RightHandPinky3",
+        "LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand",
+        "LeftHandThumb1", "LeftHandThumb2", "LeftHandThumb3",
+        "LeftHandIndex1", "LeftHandIndex2", "LeftHandIndex3",
+        "LeftHandMiddle1", "LeftHandMiddle2", "LeftHandMiddle3",
+        "LeftHandRing1", "LeftHandRing2", "LeftHandRing3",
+        "LeftHandPinky1", "LeftHandPinky2", "LeftHandPinky3",
+        "Head", "Spine"
+      ];
+
+      for (let f = 0; f < totalFrames; f++) {
+        const timeSec = Math.min(totalMotionDuration, f / fps);
+        const timeMs = timeSec * 1000.0;
+
+        let poseSnapshot = currentPose;
+        if (keyframes.length >= 2) {
+          let prevKf = keyframes[0];
+          let nextKf = keyframes[keyframes.length - 1];
+          for (let i = 0; i < keyframes.length - 1; i++) {
+            if (timeSec >= keyframes[i].time && timeSec <= keyframes[i + 1].time) {
+              prevKf = keyframes[i];
+              nextKf = keyframes[i + 1];
+              break;
+            }
+          }
+          const segDur = nextKf.time - prevKf.time;
+          const alpha = segDur > 0 ? (timeSec - prevKf.time) / segDur : 0;
+          const smoothA = alpha * alpha * (3 - 2 * alpha);
+          poseSnapshot = interpolatePoses(prevKf.pose, nextKf.pose, smoothA);
+        }
+
+        // Terapkan sementara ke avatar untuk membaca quaternion murni
+        applyPoseToAvatar(poseSnapshot);
+
+        const rotations = {};
+        targetBoneNames.forEach(bName => {
+          const bone = skeletonBones[bName];
+          const restQ = restPoseRotations[bName];
+          if (bone && restQ) {
+            // Delta quaternion = restQ^-1 * bone.quaternion
+            const deltaQ = restQ.clone().invert().multiply(bone.quaternion);
+            rotations[bName] = [
+              parseFloat(deltaQ.x.toFixed(4)),
+              parseFloat(deltaQ.y.toFixed(4)),
+              parseFloat(deltaQ.z.toFixed(4)),
+              parseFloat(deltaQ.w.toFixed(4))
+            ];
+          }
+        });
+
+        frames.push({
+          frame: f,
+          timestampMs: Math.round(timeMs),
+          rotations: rotations
+        });
+      }
+
+      // Kembalikan pose asli
+      applyPoseToAvatar(currentPose);
+
+      return {
+        signId: "custom_studio_motion",
+        gloss: "CustomSign",
+        sourceFps: fps,
+        durationMs: totalMotionDuration * 1000.0,
+        coordinateSpace: "avatar_local_quaternion",
+        skeleton: "Armature",
+        totalFrames: frames.length,
+        keyframesCount: keyframes.length,
+        studioKeyframes: keyframes,
+        frames: frames
+      };
+    }
+
+    function openExportModal() {
+      const data = generateMotionJsonData();
+      const txt = JSON.stringify(data, null, 2);
+      document.getElementById('exportTextarea').value = txt;
+      document.getElementById('exportModal').style.display = 'flex';
+    }
+
+    function copyExportJson() {
+      const txt = document.getElementById('exportTextarea').value;
+      navigator.clipboard.writeText(txt).then(() => {
+        alert("Data JSON berhasil disalin ke clipboard!");
+      });
+    }
+
+    function downloadExportJson() {
+      const txt = document.getElementById('exportTextarea').value;
+      const blob = new Blob([txt], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `custom_bisindo_motion.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function openImportModal() {
+      document.getElementById('importModal').style.display = 'flex';
+    }
+
+    async function loadImportFile(input) {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 30 * 1024 * 1024) {
+        alert('File JSON terlalu besar (maksimal 30 MB).');
+        input.value = '';
+        return;
+      }
+      try {
+        document.getElementById('importTextarea').value = await file.text();
+      } catch (error) {
+        alert('Tidak bisa membaca file JSON: ' + error.message);
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function applyImportedJson() {
+      const txt = document.getElementById('importTextarea').value.trim();
+      if (!txt) {
+        alert('Pilih file JSON atau tempel isinya terlebih dahulu.');
+        return;
+      }
+      try {
+        const obj = JSON.parse(txt);
+        if (!obj || typeof obj !== 'object') throw new Error('Isi JSON harus berupa objek animasi.');
+        if (obj.coordinateSpace && obj.coordinateSpace !== 'avatar_local_quaternion') {
+          throw new Error(`Coordinate space tidak didukung: ${obj.coordinateSpace}`);
+        }
+
+        let imported;
+        if (Array.isArray(obj.studioKeyframes)) {
+          imported = obj.studioKeyframes.map((kf, index) => {
+            if (!Number.isFinite(kf.time) || kf.time < 0) {
+              throw new Error(`Waktu keyframe ${index + 1} tidak valid.`);
+            }
+            if (kf.rotations) {
+              return { ...kf, rotations: cloneRotationMap(kf.rotations) };
+            }
+            if (!kf.pose || typeof kf.pose !== 'object') {
+              throw new Error(`Pose keyframe ${index + 1} tidak valid.`);
+            }
+            return { ...kf, pose: { ...kf.pose } };
+          });
+        } else if (Array.isArray(obj.frames) && obj.frames.length > 0) {
+          if (obj.frames.length > 10000) throw new Error('Motion melebihi 10.000 frame.');
+          imported = obj.frames.map((frame, index) => {
+            if (!Number.isFinite(frame.timestampMs) || frame.timestampMs < 0) {
+              throw new Error(`Timestamp frame ${index + 1} tidak valid.`);
+            }
+            return {
+              id: index + 1,
+              label: `F ${Number.isInteger(frame.frame) ? frame.frame : index}`,
+              frameIndex: Number.isInteger(frame.frame) ? frame.frame : index,
+              time: frame.timestampMs / 1000,
+              rotations: cloneRotationMap(frame.rotations)
+            };
+          });
+        } else {
+          throw new Error('JSON harus memiliki studioKeyframes atau frames[].rotations. File landmark bukan motion animasi.');
+        }
+
+        if (imported.some((kf, index) => index > 0 && kf.time < imported[index - 1].time)) {
+          throw new Error('Timestamp frame harus berurutan dari awal ke akhir.');
+        }
+        if (imported.some(kf => !!kf.rotations !== !!imported[0]?.rotations)) {
+          throw new Error('Keyframe pose dan quaternion tidak boleh dicampur dalam satu motion.');
+        }
+
+        stopMotionPlayback();
+        keyframes = imported;
+        activeKeyframeIdx = -1;
+        activeRawRotations = null;
+        importedMotionMeta = imported.length && imported[0].rotations ? {
+          signId: obj.signId,
+          gloss: obj.gloss,
+          sourceFps: obj.sourceFps,
+          sourceDataset: obj.sourceDataset,
+          sourceVideo: obj.sourceVideo,
+          videoRelPath: obj.videoRelPath,
+          retargeterVersion: obj.retargeterVersion,
+          depthEstimate: obj.depthEstimate
+        } : null;
+        const lastTime = imported.at(-1)?.time || 0;
+        totalMotionDuration = Math.max(
+          0.1, lastTime,
+          Number.isFinite(obj.durationMs) ? obj.durationMs / 1000 : 0
+        );
+        syncDurationSelect();
+        if (keyframes.length > 0) selectKeyframe(0);
+        else renderKeyframeTrack();
+        closeModal('importModal');
+        alert(`Berhasil memuat ${keyframes.length} ${hasRawTimeline() ? 'frame motion manual' : 'keyframe pose'}!`);
+      } catch (e) {
+        alert("Gagal membaca JSON: " + e.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 9. Live Webcam MoCap & Keyframe Recorder
+    // -------------------------------------------------------------
+    let holistic = null;
+    let cameraHelper = null;
+    let isWebcamActive = false;
+    let isRecordingMoCap = false;
+    let mocapRecordingFrames = [];
+    let mocapRecordDuration = 5.0;
+    let mocapRecordStartTime = 0;
+    let lastMocapSampleTime = 0;
+    let mocapSampleInterval = 90; // ~11 FPS keyframes, ideal for keyframing
+    let countdownTimer = null;
+
+    function toggleWebcamMoCap() {
+      if (isWebcamActive) {
+        stopWebcamMoCap();
+      } else {
+        startWebcamMoCap();
+      }
+    }
+
+    async function startWebcamMoCap() {
+      const pip = document.getElementById('webcamPipBox');
+      const btn = document.getElementById('btnWebcamMoCap');
+      const statusText = document.getElementById('mocapStatusText');
+
+      pip.style.display = 'flex';
+      btn.style.background = 'rgba(16, 185, 129, 0.25)';
+      btn.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+      btn.style.color = '#6ee7b7';
+      btn.innerHTML = '🟢 Kamera MoCap Aktif';
+      statusText.innerText = 'Menginisialisasi MediaPipe...';
+
+      try {
+        if (!holistic) {
+          holistic = new Holistic({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
+          });
+
+          holistic.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+            selfieMode: true
+          });
+
+          holistic.onResults(onMoCapResults);
+        }
+
+        const video = document.getElementById('mocapVideo');
+        if (!cameraHelper) {
+          cameraHelper = new Camera(video, {
+            onFrame: async () => {
+              if (isWebcamActive && holistic) {
+                await holistic.send({ image: video });
+              }
+            },
+            width: 480,
+            height: 360
+          });
+        }
+
+        await cameraHelper.start();
+        isWebcamActive = true;
+        statusText.innerText = '🟢 Kamera Aktif (Meniru Gerakan)';
+      } catch (err) {
+        console.error('Gagal mengakses kamera:', err);
+        statusText.innerText = '⚠️ Akses Kamera Ditolak';
+        alert('Gagal mengakses webcam: ' + err.message + '\nPastikan izin kamera diizinkan di browser.');
+      }
+    }
+
+    function stopWebcamMoCap() {
+      isWebcamActive = false;
+      isRecordingMoCap = false;
+
+      if (cameraHelper) {
+        try { cameraHelper.stop(); } catch (e) {}
+      }
+
+      const video = document.getElementById('mocapVideo');
+      if (video && video.srcObject) {
+        const stream = video.srcObject;
+        stream.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+      }
+
+      document.getElementById('webcamPipBox').style.display = 'none';
+      const btn = document.getElementById('btnWebcamMoCap');
+      btn.style.background = 'rgba(239, 68, 68, 0.2)';
+      btn.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+      btn.style.color = '#fca5a5';
+      btn.innerHTML = '🔴 Rekam via Kamera (MoCap)';
+    }
+
+    function onMoCapResults(results) {
+      if (!isWebcamActive) return;
+
+      const canvas = document.getElementById('mocapCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 480;
+      canvas.height = 360;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Gambar Landmark sederhana
+      function drawPoints(pts, color) {
+        if (!pts) return;
+        ctx.fillStyle = color;
+        pts.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x * canvas.width, p.y * canvas.height, 3, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+      }
+
+      if (results.poseLandmarks) drawPoints(results.poseLandmarks, '#38bdf8');
+      if (results.rightHandLandmarks) drawPoints(results.rightHandLandmarks, '#34d399');
+      if (results.leftHandLandmarks) drawPoints(results.leftHandLandmarks, '#f43f5e');
+
+      // 1. Ekstrak Lengan & Pergelangan secara Kinematik Organik (3D Depth + Clavicle + Twist)
+      if (results.poseLandmarks) {
+        const lm = results.poseLandmarks;
+
+        // Fungsi Kinematika Lengan Organik (Kanan / Kiri)
+        function solveArmKinematics(shIdx, elIdx, wrIdx, hLandmarks, side) {
+          if (!lm[shIdx] || !lm[elIdx] || !lm[wrIdx]) return;
+          const sh = lm[shIdx], el = lm[elIdx], wr = lm[wrIdx];
+
+          // Vektor Segmen
+          // MediaPipe Pose (Unmirrored video view):
+          // Lengan Kanan ada di sisi kiri layar (sh.x ~ 0.4, el.x ~ 0.25 -> outward = sh.x - el.x > 0)
+          // Lengan Kiri ada di sisi kanan layar (sh.x ~ 0.6, el.x ~ 0.75 -> outward = el.x - sh.x > 0)
+          const outward_el = (side === 'Right') ? (sh.x - el.x) : (el.x - sh.x);
+          const outward_wr = (side === 'Right') ? (sh.x - wr.x) : (wr.x - sh.x);
+
+          const u_x = el.x - sh.x, u_y = el.y - sh.y, u_z = (el.z - sh.z) || 0;
+          const v_x = wr.x - el.x, v_y = wr.y - el.y, v_z = (wr.z - el.z) || 0;
+          const len_u = Math.hypot(u_x, u_y, u_z) || 0.25;
+          const len_v = Math.hypot(v_x, v_y, v_z) || 0.25;
+
+          // A. TEKUKAN SIKU (Forearm Bend / Flexion)
+          // Sudut antara segmen lengan atas (sh -> el) dan lengan bawah (el -> wr)
+          const dot = (u_x * v_x + u_y * v_y + u_z * v_z) / (len_u * len_v);
+          const bendRad = Math.acos(Math.max(-1, Math.min(1, dot)));
+          let target_bend = bendRad * (180 / Math.PI);
+          target_bend = Math.max(0, Math.min(135, target_bend));
+
+          // B. RENTANG KESAMPING / ARM SPREAD (Abduksi Lengan)
+          const effectiveOutward = Math.max(outward_el, outward_wr * 0.75);
+          let target_spread = (effectiveOutward - 0.04) * 155;
+          target_spread = Math.max(-10, Math.min(80, target_spread));
+
+          // C. ELEVASI LENGAN ATAS / ARM UP (Pitch)
+          // Dihitung langsung dari tinggi pergelangan tangan & siku relatif terhadap bahu
+          // Dalam koordinat citra, y makin kecil = makin tinggi
+          const wristElev = sh.y - wr.y; // > 0 saat tangan diangkat setinggi dada/wajah
+          const elbowElev = sh.y - el.y;
+          const forwardReach = Math.max(0, -u_z * 1.4) + Math.max(0, -(wr.z - sh.z) * 0.8);
+
+          let target_up = 35 + wristElev * 135 + Math.max(0, elbowElev) * 55 + forwardReach * 45;
+          target_up = Math.max(0, Math.min(115, target_up));
+
+          // D. ROLL LENGAN ATAS (External Rotation)
+          // Kunci anatomi: saat lengan bawah mengarah ke atas (wr lebih tinggi dari el),
+          // lengan atas harus melakukan external roll agar siku menopang ke bawah-luar dan lengan bawah tegak
+          const forearmUp = Math.max(0, el.y - wr.y) / len_v; // 0 saat mendatar, ~1 saat tegak lurus ke atas
+          let target_roll = forearmUp * 42 + Math.max(0, target_spread) * 0.35;
+          target_roll = Math.max(-15, Math.min(65, target_roll));
+
+          // Face Clearance Shield: hindari tangan & siku menembus kepala saat berisyarat dekat wajah
+          let distToNose = 1.0;
+          if (lm[0]) {
+            distToNose = Math.hypot(wr.x - lm[0].x, wr.y - lm[0].y);
+          }
+          if (distToNose < 0.12 && wristElev > 0.08) {
+            target_bend = Math.min(94, target_bend);
+            target_spread = Math.max(14, target_spread);
+          }
+
+          // E. TWIST LENGAN BAWAH & ORIENTASI PERGELANGAN TANGAN (dari Hand Landmarks)
+          let target_twist = 0;
+          let target_wrist_pitch = 0;
+          let target_wrist_yaw = 0;
+          let target_wrist_roll = 0;
+
+          if (hLandmarks && hLandmarks.length >= 21) {
+            const p0 = hLandmarks[0];   // Wrist
+            const p5 = hLandmarks[5];   // Index MCP
+            const p9 = hLandmarks[9];   // Middle MCP
+            const p17 = hLandmarks[17]; // Pinky MCP
+
+            const vPalm = { x: p9.x - p0.x, y: p9.y - p0.y, z: (p9.z - p0.z) || 0 };
+            const dPalm = Math.hypot(vPalm.x, vPalm.y, vPalm.z) || 0.1;
+
+            const vKnuckle = (side === 'Right')
+              ? { x: p5.x - p17.x, y: p5.y - p17.y, z: (p5.z - p17.z) || 0 }
+              : { x: p17.x - p5.x, y: p17.y - p5.y, z: (p17.z - p5.z) || 0 };
+
+            // Vektor Normal Telapak: Cross(vPalm, vKnuckle)
+            const nPalm = {
+              x: vPalm.y * vKnuckle.z - vPalm.z * vKnuckle.y,
+              y: vPalm.z * vKnuckle.x - vPalm.x * vKnuckle.z,
+              z: vPalm.x * vKnuckle.y - vPalm.y * vKnuckle.x
+            };
+            const nLen = Math.hypot(nPalm.x, nPalm.y, nPalm.z) || 1;
+            const normZ = nPalm.z / nLen; // Positif = telapak menghadap kamera, Negatif = punggung tangan
+
+            // Forearm Twist (Pronation / Supination):
+            // Saat telapak menghadap kamera (normZ > 0), twist natural adalah supinated (+12° s/d +34°)
+            // Saat punggung tangan menghadap kamera (normZ < 0), twist pronated (-15° s/d -50°)
+            if (normZ >= 0) {
+              target_twist = 12 + normZ * 22;
+            } else {
+              target_twist = -15 + normZ * 35;
+            }
+            target_twist = Math.max(-65, Math.min(65, target_twist));
+
+            // Wrist Pitch (fleksi/ekstensi pergelangan tangan relatif terhadap lengan bawah)
+            const dirFA_x = v_x / len_v, dirFA_y = v_y / len_v;
+            const dirPalm_x = vPalm.x / dPalm, dirPalm_y = vPalm.y / dPalm;
+            const crossPitch = dirFA_x * dirPalm_y - dirFA_y * dirPalm_x;
+            const pitchDeg = Math.asin(Math.max(-1, Math.min(1, crossPitch))) * (180 / Math.PI);
+            target_wrist_pitch = Math.max(-45, Math.min(45, pitchDeg * 1.1));
+
+            // Wrist Yaw (lambaian kiri/kanan pergelangan)
+            const yawDelta = (side === 'Right') ? (dirPalm_x - dirFA_x) : (dirFA_x - dirPalm_x);
+            target_wrist_yaw = Math.max(-35, Math.min(35, yawDelta * 45));
+
+            // Wrist Roll
+            target_wrist_roll = Math.max(-35, Math.min(35, normZ * -25));
+          }
+
+          // F. SMOOTHING FILTER (EMA - Halus & Responsif)
+          const alpha = 0.42;
+          currentPose[`${side}Arm_up`] = currentPose[`${side}Arm_up`] * (1 - alpha) + target_up * alpha;
+          currentPose[`${side}Arm_spread`] = currentPose[`${side}Arm_spread`] * (1 - alpha) + target_spread * alpha;
+          currentPose[`${side}Arm_roll`] = currentPose[`${side}Arm_roll`] * (1 - alpha) + target_roll * alpha;
+          currentPose[`${side}ForeArm_bend`] = currentPose[`${side}ForeArm_bend`] * (1 - alpha) + target_bend * alpha;
+          currentPose[`${side}ForeArm_twist`] = currentPose[`${side}ForeArm_twist`] * (1 - alpha) + target_twist * alpha;
+          currentPose[`${side}Hand_pitch`] = currentPose[`${side}Hand_pitch`] * (1 - alpha) + target_wrist_pitch * alpha;
+          currentPose[`${side}Hand_yaw`] = currentPose[`${side}Hand_yaw`] * (1 - alpha) + target_wrist_yaw * alpha;
+          currentPose[`${side}Hand_roll`] = currentPose[`${side}Hand_roll`] * (1 - alpha) + target_wrist_roll * alpha;
+        }
+
+        // Tangan Kanan: 12=Shoulder, 14=Elbow, 16=Wrist
+        solveArmKinematics(12, 14, 16, results.rightHandLandmarks, 'Right');
+
+        // Tangan Kiri: 11=Shoulder, 13=Elbow, 15=Wrist
+        solveArmKinematics(11, 13, 15, results.leftHandLandmarks, 'Left');
+
+        // Kepala: 0=Nose, 7=Left Ear, 8=Right Ear
+        if (lm[0] && lm[7] && lm[8]) {
+          const earMidX = (lm[7].x + lm[8].x) / 2;
+          const turn = (lm[0].x - earMidX) * 150;
+          currentPose.Head_turn = currentPose.Head_turn * 0.7 + Math.max(-40, Math.min(40, turn)) * 0.3;
+        }
+      }
+
+      // 2. Ekstrak Tekukan Jemari (Right Hand)
+      if (results.rightHandLandmarks) {
+        extractHandFingerCurls(results.rightHandLandmarks, 'Right');
+      }
+
+      // 3. Ekstrak Tekukan Jemari (Left Hand)
+      if (results.leftHandLandmarks) {
+        extractHandFingerCurls(results.leftHandLandmarks, 'Left');
+      }
+
+      // Terapkan pose ke Avatar
+      applyPoseToAvatar(currentPose);
+
+      // Tangani Perekaman Keyframe
+      if (isRecordingMoCap) {
+        const now = performance.now();
+        const elapsed = (now - mocapRecordStartTime) / 1000.0;
+
+        const timerEl = document.getElementById('mocapRecTimer');
+        if (timerEl) {
+          timerEl.innerText = `REC ${elapsed.toFixed(1)}s / ${mocapRecordDuration.toFixed(1)}s`;
+        }
+
+        if (now - lastMocapSampleTime >= mocapSampleInterval) {
+          mocapRecordingFrames.push({
+            time: elapsed,
+            pose: JSON.parse(JSON.stringify(currentPose))
+          });
+          lastMocapSampleTime = now;
+        }
+
+        if (elapsed >= mocapRecordDuration) {
+          finishMoCapRecording();
+        }
+      }
+    }
+
+    function extractHandFingerCurls(h, side) {
+      if (!h || h.length < 21) return;
+      const pWrist = h[0];
+      const pMiddleMcp = h[9];
+      const palmSize = Math.hypot(
+        pMiddleMcp.x - pWrist.x,
+        pMiddleMcp.y - pWrist.y,
+        (pMiddleMcp.z - pWrist.z) || 0
+      ) || 0.1;
+
+      // 4 Jari (Index, Middle, Ring, Pinky) dengan 3D Segment Length Invariance
+      const fingers = [
+        { name: "Index", tip: 8, pip: 6, mcp: 5 },
+        { name: "Middle", tip: 12, pip: 10, mcp: 9 },
+        { name: "Ring", tip: 16, pip: 14, mcp: 13 },
+        { name: "Pinky", tip: 20, pip: 18, mcp: 17 },
+      ];
+
+      fingers.forEach(f => {
+        const dTipMcp = Math.hypot(
+          h[f.tip].x - h[f.mcp].x,
+          h[f.tip].y - h[f.mcp].y,
+          (h[f.tip].z - h[f.mcp].z) || 0
+        );
+        const dPipMcp = Math.hypot(
+          h[f.pip].x - h[f.mcp].x,
+          h[f.pip].y - h[f.mcp].y,
+          (h[f.pip].z - h[f.mcp].z) || 0
+        );
+        const dTipPip = Math.hypot(
+          h[f.tip].x - h[f.pip].x,
+          h[f.tip].y - h[f.pip].y,
+          (h[f.tip].z - h[f.pip].z) || 0
+        );
+        const fullLen = dPipMcp + dTipPip;
+        // Rasio ekstensi: 1.0 = lurus tegak terbuka, 0.0 = menekuk penuh genggaman
+        const extendRatio = Math.max(0, Math.min(1.0, (dTipMcp / (fullLen || 1) - 0.40) / 0.52));
+        const curlDeg = Math.round((1.0 - extendRatio) * 85);
+
+        const key = `${side}_${f.name}`;
+        currentPose[key] = currentPose[key] * 0.55 + curlDeg * 0.45;
+      });
+
+      // Jempol (Thumb): ukur jarak ujung jempol ke dasar kelingking (oposisi) & ruas terbuka
+      const dThumbPinky = Math.hypot(
+        h[4].x - h[17].x,
+        h[4].y - h[17].y,
+        (h[4].z - h[17].z) || 0
+      ) / palmSize;
+      const ratioThumb = Math.max(0, Math.min(1.0, (dThumbPinky - 0.46) / 0.48));
+      const thumbDeg = Math.round((1.0 - ratioThumb) * 75);
+      currentPose[`${side}_Thumb`] = currentPose[`${side}_Thumb`] * 0.55 + thumbDeg * 0.45;
+
+      // Spread (Pelebaran jari antar ujung telunjuk dan kelingking)
+      const dIndexPinky = Math.hypot(h[8].x - h[20].x, h[8].y - h[20].y) / palmSize;
+      const spreadDeg = Math.round((dIndexPinky - 0.75) * 40);
+      currentPose[`${side}_Spread`] = Math.max(-10, Math.min(30, spreadDeg));
+    }
+
+    function startCountdownAndRecord(durationSec) {
+      if (!isWebcamActive) {
+        startWebcamMoCap();
+      }
+
+      mocapRecordDuration = durationSec;
+      const overlay = document.getElementById('mocapCountdownOverlay');
+      overlay.style.display = 'flex';
+
+      let count = 3;
+      overlay.innerText = count;
+
+      if (countdownTimer) clearInterval(countdownTimer);
+
+      countdownTimer = setInterval(() => {
+        count--;
+        if (count > 0) {
+          overlay.innerText = count;
+        } else if (count === 0) {
+          overlay.innerText = "MULAI!";
+        } else {
+          clearInterval(countdownTimer);
+          overlay.style.display = 'none';
+
+          // Mulai merekam
+          isRecordingMoCap = true;
+          mocapRecordStartTime = performance.now();
+          lastMocapSampleTime = 0;
+          mocapRecordingFrames = [];
+
+          document.getElementById('mocapRecTimer').style.display = 'inline';
+          document.getElementById('btnStopRecManual').style.display = 'inline';
+          document.getElementById('btnRecord5s').style.display = 'none';
+          document.getElementById('btnRecord3s').style.display = 'none';
+        }
+      }, 900);
+    }
+
+    function stopRecordingNow() {
+      if (isRecordingMoCap) {
+        finishMoCapRecording();
+      }
+    }
+
+    function finishMoCapRecording() {
+      isRecordingMoCap = false;
+
+      document.getElementById('mocapRecTimer').style.display = 'none';
+      document.getElementById('btnStopRecManual').style.display = 'none';
+      document.getElementById('btnRecord5s').style.display = 'inline';
+      document.getElementById('btnRecord3s').style.display = 'inline';
+
+      if (mocapRecordingFrames.length > 2) {
+        // Simpan hasil rekaman kamera ke Keyframe Sequencer
+        const dur = mocapRecordDuration;
+        totalMotionDuration = dur;
+        document.getElementById('motionDurationSelect').value = dur.toString();
+
+        keyframes = mocapRecordingFrames.map((f, idx) => ({
+          id: Date.now() + idx,
+          label: `Kamera #${idx + 1}`,
+          time: f.time,
+          pose: f.pose
+        }));
+
+        recalculateKeyframeTimes();
+        activeKeyframeIdx = 0;
+        renderKeyframeTrack();
+
+        // Mulai putar animasi secara mulus
+        if (!isPlayingMotion) {
+          togglePlayMotion();
+        }
+
+        alert(`🎉 Berhasil merekam ${keyframes.length} keyframe gerakan dari kamera selama ${dur} detik!\nSilakan scrub timeline untuk melihat atau klik "💾 Ekspor JSON" untuk menyimpan.`);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Inisialisasi Aplikasi saat Load
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      initThree();
+      loadAvatar();
+      renderInspector();
+    });
+  </script>
+</body>
+</html>
