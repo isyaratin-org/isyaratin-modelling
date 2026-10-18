@@ -489,14 +489,21 @@ def export_checkpoint_to_tflite(
         print(f"  [OK] Metadata spesifikasi tersimpan di: {output_spec_path}")
 
     # Salin otomatis ke Flutter Assets jika diarahkan
-    if flutter_assets_dir and os.path.exists(flutter_assets_dir):
-        dest_tflite = os.path.join(flutter_assets_dir, "sign_model.tflite")
-        dest_labels = os.path.join(flutter_assets_dir, "labels.txt")
-        shutil.copyfile(output_tflite_path, dest_tflite)
-        shutil.copyfile(output_labels_path, dest_labels)
-        print(f"\n[FLUTTER SYNC] Berhasil menyalin model dan label ke aset Flutter:")
-        print(f"  -> {dest_tflite}")
-        print(f"  -> {dest_labels}")
+    candidate_flutter_dirs = [
+        flutter_assets_dir,
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "isyaratin", "assets", "models"),
+        r"d:\Project\4mlai\isyaratin\isyaratin\assets\models",
+        r"d:\Project\4mlai\apapun\isyaratin\assets\models",
+    ]
+    for f_dir in set(candidate_flutter_dirs):
+        if f_dir and os.path.exists(f_dir):
+            dest_tflite = os.path.join(f_dir, "sign_model.tflite")
+            dest_labels = os.path.join(f_dir, "labels.txt")
+            shutil.copyfile(output_tflite_path, dest_tflite)
+            shutil.copyfile(output_labels_path, dest_labels)
+            print(f"\n[FLUTTER SYNC] Berhasil menyalin model dan label ke aset Flutter:")
+            print(f"  -> {dest_tflite}")
+            print(f"  -> {dest_labels}")
 
     return output_tflite_path, output_labels_path
 

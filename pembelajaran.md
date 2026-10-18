@@ -590,10 +590,11 @@ Pelatihan BiLSTM 2-Layer (128 hidden1, 96 hidden2, 192 head) pada 1,885 sampel s
   - TensorFlow Lite: [models/sign_model.tflite](file:///d:/Project/4mlai/isyaratin/models/sign_model.tflite) (3,038.3 KB)
   - Labels Text: [models/labels.txt](file:///d:/Project/4mlai/isyaratin/models/labels.txt) (55 baris kanonikal)
 - **Verifikasi Kontrak Mobile**:
-  - Input: `[1, 32, 186]` float32 (sliding window MediaPipe 32 frame).
+  - Input model: `[1, 32, 400]` float32.
+  - Ekstraksi kamera menghasilkan 186 fitur dasar per frame (61 landmark × 3 + 3 presence flags), lalu mobile wajib menjalankan ekspansi spasio-temporal yang sama dengan `compute_extended_features`: 183 velocity termasking + 31 fitur relasional. Total akhir: `186 + 183 + 31 = 400` fitur per frame.
   - Output: `[1, 55]` float32 (probabilitas Softmax).
   - Kompatibilitas Runtime: 100% Pure TFLite Builtins (tanpa Flex Delegate / Select TF Ops), siap langsung digunakan di Flutter via `tflite_flutter`.
-  - Berhasil disinkronisasi ke: `d:\Project\4mlai\apapun\isyaratin\assets\models\`.
+  - Artefak mobile disinkronisasi ke: `d:\Project\4mlai\isyaratin\isyaratin\assets\models\`.
 
 ---
 
@@ -663,13 +664,57 @@ Skrip inferensi langsung webcam [camera.py](file:///d:/Project/4mlai/isyaratin/c
 
 - **Struktur Pipeline Inti yang Aktif & Terfokus Saat Ini**:
   1. **Ekstraksi Landmark Spasio-Temporal**: [holistic_extractor.py](file:///d:/Project/4mlai/isyaratin/holistic_extractor.py) (186D body-centric, causal torso tracking, velocity & relational masking).
-  2. **Penyusunan Dataset Terpadu**: [build_dataset_gabungan.py](file:///d:/Project/4mlai/isyaratin/build_dataset_gabungan.py) (55 kelas: Manual 20 kelas + WL 9 kelas + Abjad 26 kelas).
+  2. **Penyusunan Dataset Terpadu**: [build_dataset_gabungan.py](file:///d:/Project/4mlai/isyaratin/build_dataset_gabungan.py) (Mendukung seleksi dinamis kata umum, capping sampel per kelas, dan integrasi multi-dataset).
   3. **Pelatihan Model Terpadu**: [train-new.py](file:///d:/Project/4mlai/isyaratin/train-new.py) (Mendukung `--dataset gabungan`, `--dataset manual`, `--dataset wl`, auto-export PyTorch `.pt`, ONNX `.onnx`, dan TFLite `.tflite`).
   4. **Ekspor & Sinkronisasi Mobile**: [export_tflite.py](file:///d:/Project/4mlai/isyaratin/export_tflite.py) (Keras unrolled 100% Pure Builtins TFLite untuk Flutter).
   5. **Evaluasi Komprehensif**: [evaluate.py](file:///d:/Project/4mlai/isyaratin/evaluate.py) (Confusion Matrix, ROC-AUC, Precision-Recall, F1-Score).
-  6. **Disambiguasi Kinematik**: [kinematic_engine.py](file:///d:/Project/4mlai/isyaratin/kinematic_engine.py) & [labels/bisindo_rules.json](file:///d:/Project/4mlai/isyaratin/labels/bisindo_rules.json) (14 rule eliminasi ambiguitas + idle rejection).
+  6. **Disambiguasi Kinematic**: [kinematic_engine.py](file:///d:/Project/4mlai/isyaratin/kinematic_engine.py) & [labels/bisindo_rules.json](file:///d:/Project/4mlai/isyaratin/labels/bisindo_rules.json) (14 rule eliminasi ambiguitas + idle rejection).
   7. **Inferensi Kamera Live / Video**: [camera.py](file:///d:/Project/4mlai/isyaratin/camera.py) (Hands-free recording, live sentence builder, HUD realtime).
   8. **Suite Pengujian Unit**: [test_pipeline_audit.py](file:///d:/Project/4mlai/isyaratin/test_pipeline_audit.py) & [test_kinematic_cases.py](file:///d:/Project/4mlai/isyaratin/test_kinematic_cases.py) (100% lulus).
+
+---
+
+## 20. Eksperimen Penyaringan Kosakata Gabungan (22 Kelas) & Capping Sampel Anti-Overfitting
+
+- **Latar Belakang & Masalah**:
+  - Pada iterasi awal dataset gabungan 55 kelas dan 29 kelas, kelas pertanyaan 5W1H dari WL-BISINDO (`Apa`, `Bagaimana`, `Cari`, `Di Mana`, `Kapan`, `Mengapa`, `Siapa`) memiliki jumlah sampel yang terlalu besar (50 sampel per kelas) dibandingkan dataset manual perbankan/layanan (~20 sampel per kelas).
+  - Ketimpangan rasio sampel (2.5:1) ini memicu bias model, di mana kelas dengan variansi gerak tinggi seperti `Apa` dan `Di Mana` mengalami degradasi F1-Score (0.63 - 0.64) dan membingungkan batas keputusan (*decision boundary*) kelas perbankan.
+  - Selain itu, dataset abjad A-Z (citra statis 2D yang diinjeksikan jitter sintetis) memiliki karakteristik artikulasi yang berbeda dengan video gestur kata alami, sehingga lebih optimal dipisahkan dari model kata sekuensial.
+
+- **Solusi Rekayasa Dataset ([build_dataset_gabungan.py](file:///d:/Project/4mlai/isyaratin/build_dataset_gabungan.py))**:
+  1. **Pengecualian Abjad A-Z**: Model difokuskan 100% pada kosakata kata/frasa utuh.
+  2. **Eliminasi Kata Tanya WL**: Seluruh 7 kata tanya (`Apa`, `Bagaimana`, `Cari`, `Di Mana`, `Kapan`, `Mengapa`, `Siapa`) dihapus dari set gabungan.
+  3. **Preservasi Kata Umum Percakapan**: Mempertahankan kelas kata ganti & repetisi esensial dari WL-BISINDO: `Saya` dan `Lagi`.
+  4. **Dynamic Sample Capping (`--max-samples 40`)**: Menerapkan batas atas maksimal 40 sampel per kelas. Jumlah sampel `Saya` dan `Lagi` dipangkas dari 50 menjadi tepat 40 sampel agar proporsional terhadap kelas manual (20 sampel).
+  5. **Total Komposisi Dataset**:
+     - 20 Kelas Manual: 395 sampel (~20 sampel/kelas, `Berapa` 15 sampel).
+     - 2 Kelas WL-BISINDO: 80 sampel (40 sampel/kelas).
+     - Total: **22 Kelas Kanonikal** dengan **475 sampel** berimbang.
+
+- **Hasil Pelatihan & Evaluasi Model 22 Kelas**:
+  - **Arsitektur**: MGN (Multi-Granularity Network: Conv1D k=3/k=5 + BiLSTM 2-Layer + Stroke Attention Pooling, 400D extended features).
+  - **Konfigurasi**: 64 Epoch, Batch Size 16, Focal Loss ($\gamma = 2.0$, Label Smoothing 0.05), Random Seed 42, CUDA GPU.
+  - **Akurasi Validasi Model**: **94.74%** (tercapai stabil di Epoch 55).
+  - **Akurasi Konsensus Video (1 Video = 1 Keputusan)**: **93.68%** (naik dari 89.94%).
+  - **Metrik Evaluasi Holdout (Stratified Split 20%, 95 video)**:
+    - **Top-1 Accuracy**: **95.79%**
+    - **Top-3 Accuracy**: **100.00%**
+    - **Top-5 Accuracy**: **100.00%**
+    - **Macro F1-Score**: **0.9524 (95.2%)**
+    - **Weighted F1-Score**: **0.9580 (95.8%)**
+    - **Macro ROC-AUC**: **0.999**
+    - **Micro Average Precision (PR)**: **0.983**
+  - **Kinerja Spesifik Kelas WL**:
+    - `Saya`: Precision 1.00, Recall 1.00, F1-Score **1.00 (100%)**
+    - `Lagi`: Precision 1.00, Recall 1.00, F1-Score **1.00 (100%)**
+  - **Artefak & Mobile Sync**:
+    - Checkpoint: [models/gabungan_lstm_best.pt](file:///d:/Project/4mlai/isyaratin/models/gabungan_lstm_best.pt)
+    - ONNX: [models/gabungan_lstm.onnx](file:///d:/Project/4mlai/isyaratin/models/gabungan_lstm.onnx) (Output shape: `(1, 22)`)
+    - TFLite: [models/sign_model.tflite](file:///d:/Project/4mlai/isyaratin/models/sign_model.tflite) (3,010.0 KB, 100% Pure Builtins)
+    - Labels: [models/labels.txt](file:///d:/Project/4mlai/isyaratin/models/labels.txt) (22 kelas baris)
+    - Spesifikasi: [models/model_spec.json](file:///d:/Project/4mlai/isyaratin/models/model_spec.json)
+    - Seluruh aset mobile secara otomatis tersinkronisasi ke folder `assets/models/` pada aplikasi Flutter.
+
 
 
 

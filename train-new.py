@@ -68,7 +68,12 @@ MODEL_SAVE_PT = "models/bisindo_lstm_best.pt"
 MODEL_SAVE_ONNX = "models/bisindo_lstm.onnx"
 MODEL_SAVE_TFLITE = "models/sign_model.tflite"
 LABELS_SAVE_TXT = "models/labels.txt"
-FLUTTER_ASSETS_DIR = r"d:\Project\4mlai\apapun\isyaratin\assets\models"
+FLUTTER_ASSETS_DIRS = [
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "isyaratin", "assets", "models"),
+    r"d:\Project\4mlai\isyaratin\isyaratin\assets\models",
+    r"d:\Project\4mlai\apapun\isyaratin\assets\models",
+]
+FLUTTER_ASSETS_DIR = next((d for d in FLUTTER_ASSETS_DIRS if os.path.exists(d)), r"d:\Project\4mlai\isyaratin\isyaratin\assets\models")
 
 # Pola nama file video: signer{ID}_label{ID}_sample{ID}.mp4
 FILE_PATTERN = re.compile(r"signer(\d+)_label(\d+)_sample(\d+)", re.IGNORECASE)
@@ -1063,13 +1068,40 @@ def export_model_tflite(
                     f.write(f"{name}\n")
             print(f"  [OK] Labels text berhasil disimpan di: {labels_path} ({len(class_names)} baris)")
 
-        if flutter_dir and os.path.exists(flutter_dir):
-            dest_tflite = os.path.join(flutter_dir, "sign_model.tflite")
-            dest_labels = os.path.join(flutter_dir, "labels.txt")
-            shutil.copyfile(out_path, dest_tflite)
-            if labels_path and os.path.exists(labels_path):
-                shutil.copyfile(labels_path, dest_labels)
-            print(f"  [FLUTTER SYNC] Berhasil disinkronisasi ke: {flutter_dir}")
+            spec_path = os.path.join(os.path.dirname(os.path.abspath(out_path)), "model_spec.json")
+            spec_data = {
+                "model_name": "BISINDO Sign Recognition",
+                "arch": arch,
+                "input": {
+                    "shape": [1, seq_len, feat_dim],
+                    "dtype": "float32",
+                    "description": f"Sequence of {seq_len} frames, each containing {feat_dim} normalized landmarks/kinematic features.",
+                    "target_fps": TARGET_FPS,
+                },
+                "output": {
+                    "shape": [1, num_classes],
+                    "dtype": "float32",
+                    "activation": "softmax (probabilities [0, 1])",
+                },
+                "num_classes": num_classes,
+                "class_names": class_names,
+            }
+            with open(spec_path, "w", encoding="utf-8") as f:
+                json.dump(spec_data, f, indent=2, ensure_ascii=False)
+            print(f"  [OK] Model spec berhasil disimpan di: {spec_path}")
+
+        candidate_dirs = list(FLUTTER_ASSETS_DIRS)
+        if flutter_dir:
+            candidate_dirs.insert(0, flutter_dir)
+
+        for f_dir in set(candidate_dirs):
+            if f_dir and os.path.exists(f_dir):
+                dest_tflite = os.path.join(f_dir, "sign_model.tflite")
+                dest_labels = os.path.join(f_dir, "labels.txt")
+                shutil.copyfile(out_path, dest_tflite)
+                if labels_path and os.path.exists(labels_path):
+                    shutil.copyfile(labels_path, dest_labels)
+                print(f"  [FLUTTER SYNC] Berhasil disinkronisasi ke: {f_dir}")
 
         return out_path
     except Exception as e:

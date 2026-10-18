@@ -7,326 +7,128 @@
   },
   {
     "id": 1,
-    "name": "A",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 2,
-    "name": "Apa",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 3,
-    "name": "B",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 4,
-    "name": "Bagaimana",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 5,
     "name": "Baik",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 6,
+    "id": 2,
     "name": "Bantuannya",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 7,
+    "id": 3,
     "name": "Bapak",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 8,
+    "id": 4,
     "name": "Berapa",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 15
   },
   {
-    "id": 9,
+    "id": 5,
     "name": "Buka",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 10,
+    "id": 6,
     "name": "Buku Rekening",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 11,
-    "name": "C",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 12,
-    "name": "Cari",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 13,
-    "name": "D",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 14,
-    "name": "Di Mana",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 15,
+    "id": 7,
     "name": "Disini",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 16,
-    "name": "E",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 17,
-    "name": "F",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 18,
+    "id": 8,
     "name": "Formulir",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 19,
-    "name": "G",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 20,
-    "name": "H",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 21,
-    "name": "I",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 22,
+    "id": 9,
     "name": "Isi",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 23,
-    "name": "J",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 24,
-    "name": "K",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 25,
-    "name": "Kapan",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 26,
+    "id": 10,
     "name": "KTP",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 27,
-    "name": "L",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 28,
+    "id": 11,
     "name": "Lagi",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 29,
-    "name": "M",
-    "category": "Abjad BISINDO A-Z",
+    "category": "Percakapan & Kata Umum (WL-BISINDO)",
     "sample_count": 40
   },
   {
-    "id": 30,
+    "id": 12,
     "name": "Mau",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 31,
+    "id": 13,
     "name": "Membawa",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 32,
-    "name": "Mengapa",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 33,
+    "id": 14,
     "name": "Minimal",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 34,
-    "name": "N",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 35,
-    "name": "O",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 36,
-    "name": "P",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 37,
-    "name": "Q",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 38,
-    "name": "R",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 39,
-    "name": "S",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 40,
+    "id": 15,
     "name": "Sama-Sama",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 41,
+    "id": 16,
     "name": "Saya",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
+    "category": "Percakapan & Kata Umum (WL-BISINDO)",
+    "sample_count": 40
   },
   {
-    "id": 42,
+    "id": 17,
     "name": "Selamat Siang",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 43,
+    "id": 18,
     "name": "Setoran Awal",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 44,
-    "name": "Siapa",
-    "category": "Percakapan & 5W1H (WL-BISINDO)",
-    "sample_count": 50
-  },
-  {
-    "id": 45,
+    "id": 19,
     "name": "Silakan",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 46,
-    "name": "T",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 47,
+    "id": 20,
     "name": "Tanda Tangan",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
   },
   {
-    "id": 48,
+    "id": 21,
     "name": "Terima Kasih",
     "category": "Manual Perbankan & Layanan",
     "sample_count": 20
-  },
-  {
-    "id": 49,
-    "name": "U",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 50,
-    "name": "V",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 51,
-    "name": "W",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 52,
-    "name": "X",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 53,
-    "name": "Y",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
-  },
-  {
-    "id": 54,
-    "name": "Z",
-    "category": "Abjad BISINDO A-Z",
-    "sample_count": 40
   }
 ]
